@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GrowUp AI Premium</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-lowest": "#000000",
+                    "tertiary-dim": "#efc900",
+                    "surface-container-high": "#1d1d37",
+                    "secondary-dim": "#29e4cb",
+                    "tertiary-fixed": "#ffd709",
+                    "surface-container-low": "#111127",
+                    "on-tertiary-fixed-variant": "#665500",
+                    "outline-variant": "#46465c",
+                    "outline": "#74738b",
+                    "surface": "#0c0c1f",
+                    "on-tertiary": "#655400",
+                    "secondary-fixed-dim": "#29e4cb",
+                    "on-secondary-fixed-variant": "#006155",
+                    "background": "#0c0c1f",
+                    "primary-fixed": "#9995ff",
+                    "surface-variant": "#23233f",
+                    "on-tertiary-fixed": "#453900",
+                    "on-primary": "#1e009f",
+                    "tertiary-container": "#ffd709",
+                    "inverse-surface": "#fcf8ff",
+                    "error": "#ff6e84",
+                    "error-container": "#a70138",
+                    "surface-container": "#17172f",
+                    "tertiary-fixed-dim": "#efc900",
+                    "primary": "#a8a4ff",
+                    "secondary-container": "#006b5e",
+                    "surface-bright": "#292948",
+                    "on-secondary": "#00574c",
+                    "inverse-primary": "#5044e3",
+                    "primary-fixed-dim": "#8a85ff",
+                    "on-surface": "#e5e3ff",
+                    "surface-tint": "#a8a4ff",
+                    "surface-container-highest": "#23233f",
+                    "primary-container": "#9995ff",
+                    "on-primary-fixed-variant": "#1d0098",
+                    "secondary": "#43f3d9",
+                    "on-secondary-container": "#ddfff6",
+                    "tertiary": "#ffe792",
+                    "on-primary-container": "#16007d",
+                    "on-surface-variant": "#aaa8c3",
+                    "error-dim": "#d73357",
+                    "on-background": "#e5e3ff",
+                    "on-tertiary-container": "#5b4b00",
+                    "on-secondary-fixed": "#004239",
+                    "surface-dim": "#0c0c1f",
+                    "primary-dim": "#675df9",
+                    "on-error": "#490013",
+                    "inverse-on-surface": "#53536a",
+                    "secondary-fixed": "#43f3d9",
+                    "on-error-container": "#ffb2b9",
+                    "on-primary-fixed": "#000000"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Plus Jakarta Sans"],
+                    "body": ["Plus Jakarta Sans"],
+                    "label": ["Plus Jakarta Sans"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .kinetic-gradient {
+            background: linear-gradient(135deg, #6C63FF 0%, #00D9C0 100%);
+        }
+        .premium-aura-border {
+            position: relative;
+            background: #1d1d37;
+            border-radius: 2rem;
+            padding: 2px;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .premium-aura-border::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(from 0deg, transparent, #a8a4ff, #43f3d9, transparent 60%);
+            animation: rotate 4s linear infinite;
+            z-index: -1;
+        }
+        @keyframes rotate {
+            100% { transform: rotate(360deg); }
+        }
+        .nebula-bg {
+            background: radial-gradient(circle at 20% 30%, rgba(108, 99, 255, 0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 70%, rgba(0, 217, 192, 0.1) 0%, transparent 50%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body text-on-surface selection:bg-primary/30">
+<!-- Top Navigation Anchor -->
+<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 py-4 bg-slate-950/40 backdrop-blur-2xl shadow-[0_20px_50px_rgba(108,99,255,0.1)]">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-white cursor-pointer hover:scale-105 transition-transform">close</span>
+<h1 class="font-['Plus_Jakarta_Sans'] font-bold tracking-tight text-white">Unlock Performance</h1>
+</div>
+<div class="text-xl font-extrabold bg-gradient-to-br from-[#6C63FF] to-[#00D9C0] bg-clip-text text-transparent">
+            GrowUp AI
+        </div>
+</header>
+<main class="relative pt-24 pb-12 px-6 max-w-5xl mx-auto nebula-bg min-h-screen">
+<!-- Hero Section: Kinetic Nebula Visual -->
+<section class="mb-12 text-left relative">
+<div class="absolute -top-10 -left-10 w-64 h-64 bg-primary/20 rounded-full blur-[100px]"></div>
+<div class="relative z-10">
+<span class="inline-block px-4 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold tracking-widest mb-4 border border-primary/20">PREMIUM ACCESS</span>
+<h2 class="text-5xl md:text-7xl font-extrabold tracking-tighter leading-tight mb-4">
+                    UNLIMITED <br/>
+<span class="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">ACCESS</span>
+</h2>
+<p class="text-on-surface-variant text-lg max-w-md leading-relaxed">
+                    Ascend to your peak potential with AI-driven hyper-growth tools. No limits, just performance.
+                </p>
+</div>
+</section>
+<!-- Bento Grid Benefits -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-16">
+<!-- Main Benefit -->
+<div class="md:col-span-2 bg-surface-container-high p-8 rounded-lg relative overflow-hidden flex flex-col justify-end min-h-[240px]">
+<div class="absolute top-0 right-0 w-1/2 h-full opacity-40">
+<img alt="Abstract digital waves" class="w-full h-full object-cover" data-alt="abstract digital waves in deep purple and cyan with smooth glowing lines and soft bokeh particles" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDV5hv0Qb482razDldXs2N9DnEjgyU-L7-99h_6fkm4tBZ9fZZ-jXgsacKuSh22GU6bqoWOcSJAz74LGFmXpaiZDQfWxxWZFl0H6vMPwSpMSPlFpK-rFN96Ft37I1_DVoWWR1BhApxHJrgavGZa1-p8tU6KpCSreDYVxwrdl7WIrd4opdCN937aXCkEObhIR3ysrGsAXTkLJ9pnNqHHYZIHnr4-84VW6wDFBO7KM_Ketf-kNNEuLBc_9hHy3iNi0L1J5pmSJwJhfHQ"/>
+</div>
+<div class="relative z-10">
+<span class="material-symbols-outlined text-secondary mb-4 text-3xl">chat_bubble</span>
+<h3 class="text-2xl font-bold mb-1">Unlimited AI Assistant</h3>
+<p class="text-on-surface-variant">24/7 access to personalized growth coaching.</p>
+</div>
+</div>
+<!-- Mini Benefit 1 -->
+<div class="bg-surface-container-high p-6 rounded-lg flex flex-col justify-center items-center text-center">
+<span class="material-symbols-outlined text-primary text-4xl mb-4">auto_fix_high</span>
+<h4 class="font-bold">6 Pro AI Tools</h4>
+<p class="text-on-surface-variant text-sm mt-1">Beard, Hair, Skin &amp; more.</p>
+</div>
+<!-- Mini Benefit 2 -->
+<div class="bg-surface-container-high p-6 rounded-lg flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-tertiary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary">military_tech</span>
+</div>
+<div>
+<h4 class="font-bold">50 Daily Coins</h4>
+<p class="text-on-surface-variant text-sm">Bonus rewards everyday.</p>
+</div>
+</div>
+<!-- Mini Benefit 3 -->
+<div class="bg-surface-container-high p-6 rounded-lg flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary">event_repeat</span>
+</div>
+<div>
+<h4 class="font-bold">30-Day Programs</h4>
+<p class="text-on-surface-variant text-sm">Structured success paths.</p>
+</div>
+</div>
+<!-- Mini Benefit 4 -->
+<div class="bg-surface-container-high p-6 rounded-lg flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">block</span>
+</div>
+<div>
+<h4 class="font-bold">Ad-free Experience</h4>
+<p class="text-on-surface-variant text-sm">Zero interruptions.</p>
+</div>
+</div>
+</section>
+<!-- Plans Section -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+<!-- Yearly Plan (Featured) -->
+<div class="premium-aura-border group cursor-pointer transition-transform hover:scale-[1.02]">
+<div class="bg-surface-container-high rounded-[calc(2rem-2px)] p-8 h-full flex flex-col relative overflow-hidden">
+<div class="flex justify-between items-start mb-8">
+<div>
+<span class="text-tertiary font-bold tracking-widest text-xs mb-2 block uppercase">Most Popular</span>
+<h3 class="text-3xl font-extrabold">Yearly Plan</h3>
+</div>
+<div class="bg-primary/20 text-primary px-3 py-1 rounded-full text-xs font-bold">BEST VALUE</div>
+</div>
+<div class="mt-auto">
+<div class="flex items-baseline gap-2 mb-1">
+<span class="text-4xl font-extrabold text-white">₹499</span>
+<span class="text-on-surface-variant">/year</span>
+</div>
+<p class="text-secondary font-medium text-sm">~₹41/mo</p>
+</div>
+<!-- Decorative subtle icon background -->
+<span class="material-symbols-outlined absolute -bottom-6 -right-6 text-primary/5 text-9xl pointer-events-none">workspace_premium</span>
+</div>
+</div>
+<!-- Monthly Plan -->
+<div class="bg-surface-container-low border border-outline-variant/10 rounded-lg p-8 cursor-pointer hover:bg-surface-container transition-all group">
+<div class="flex flex-col h-full">
+<div class="mb-8">
+<span class="text-on-surface-variant font-bold tracking-widest text-xs mb-2 block uppercase">Flexible</span>
+<h3 class="text-3xl font-extrabold">Monthly Plan</h3>
+</div>
+<div class="mt-auto">
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-extrabold text-white">₹99</span>
+<span class="text-on-surface-variant">/month</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- CTA & Footer -->
+<section class="flex flex-col items-center">
+<button class="kinetic-gradient w-full max-w-md py-5 rounded-xl text-on-primary font-black text-xl tracking-wide shadow-[0_0_40px_rgba(108,99,255,0.3)] hover:scale-105 transition-transform duration-300 active:scale-95">
+                START YOUR GLOW UP
+            </button>
+<div class="mt-12 flex flex-col items-center gap-6">
+<div class="flex gap-8 text-sm font-medium text-on-surface-variant">
+<a class="hover:text-primary transition-colors" href="#">Restore Purchase</a>
+<a class="hover:text-primary transition-colors" href="#">Terms of Use</a>
+<a class="hover:text-primary transition-colors" href="#">Privacy Policy</a>
+</div>
+<p class="text-xs text-outline leading-relaxed text-center max-w-xs">
+                    Subscription automatically renews. Cancel anytime in account settings.
+                </p>
+</div>
+</section>
+</main>
+<!-- Contextual FAB - suppressed on paywall per design instructions -->
+</body></html>

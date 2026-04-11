@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GrowUp AI - Weekly Report</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-dim": "#efc900",
+                    "outline-variant": "#46465c",
+                    "tertiary-fixed-dim": "#efc900",
+                    "on-surface-variant": "#aaa8c3",
+                    "tertiary-fixed": "#ffd709",
+                    "surface-bright": "#292948",
+                    "error": "#ff6e84",
+                    "inverse-surface": "#fcf8ff",
+                    "surface-container-lowest": "#000000",
+                    "primary-fixed-dim": "#8a85ff",
+                    "on-secondary-fixed-variant": "#006155",
+                    "on-primary-fixed-variant": "#1d0098",
+                    "on-tertiary-fixed": "#453900",
+                    "on-surface": "#e5e3ff",
+                    "surface-variant": "#23233f",
+                    "surface-container-highest": "#23233f",
+                    "on-secondary": "#00574c",
+                    "tertiary-container": "#ffd709",
+                    "on-error": "#490013",
+                    "inverse-primary": "#5044e3",
+                    "secondary-container": "#006b5e",
+                    "on-tertiary": "#655400",
+                    "surface-container-low": "#111127",
+                    "on-primary": "#1e009f",
+                    "on-tertiary-fixed-variant": "#665500",
+                    "inverse-on-surface": "#53536a",
+                    "surface": "#0c0c1f",
+                    "primary": "#a8a4ff",
+                    "secondary-fixed": "#43f3d9",
+                    "on-background": "#e5e3ff",
+                    "secondary": "#43f3d9",
+                    "surface-tint": "#a8a4ff",
+                    "surface-container-high": "#1d1d37",
+                    "tertiary": "#ffe792",
+                    "surface-container": "#17172f",
+                    "primary-container": "#9995ff",
+                    "on-primary-fixed": "#000000",
+                    "on-secondary-fixed": "#004239",
+                    "outline": "#74738b",
+                    "primary-dim": "#675df9",
+                    "on-primary-container": "#16007d",
+                    "secondary-fixed-dim": "#29e4cb",
+                    "primary-fixed": "#9995ff",
+                    "secondary-dim": "#29e4cb",
+                    "surface-dim": "#0c0c1f",
+                    "on-error-container": "#ffb2b9",
+                    "on-tertiary-container": "#5b4b00",
+                    "background": "#0c0c1f",
+                    "on-secondary-container": "#ddfff6",
+                    "error-dim": "#d73357",
+                    "error-container": "#a70138"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Plus Jakarta Sans"],
+                    "body": ["Plus Jakarta Sans"],
+                    "label": ["Plus Jakarta Sans"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .kinetic-gradient { background: linear-gradient(135deg, #a8a4ff 0%, #43f3d9 100%); }
+        .kinetic-text { background: linear-gradient(135deg, #a8a4ff 0%, #43f3d9 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface selection:bg-primary/30">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-slate-950/80 backdrop-blur-xl shadow-[0_40px_60px_-15px_rgba(0,0,0,0.3)] flex items-center px-6 h-16 w-full">
+<button class="text-[#a8a4ff] active:scale-95 duration-200 hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="ml-4 font-['Plus_Jakarta_Sans'] font-bold tracking-tight text-[#a8a4ff] text-xl">Weekly Report</h1>
+</header>
+<main class="pt-24 pb-32 px-6 space-y-8 max-w-md mx-auto">
+<!-- Comparison Section -->
+<section class="space-y-4">
+<div class="flex justify-between items-end">
+<h2 class="text-on-surface-variant font-semibold tracking-wide uppercase text-xs">Visual Evolution</h2>
+<span class="text-secondary text-[10px] font-bold bg-secondary/10 px-2 py-1 rounded-full">Last 7 Days</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="relative group">
+<div class="aspect-[3/4] rounded-lg overflow-hidden bg-surface-container-highest">
+<img class="w-full h-full object-cover grayscale opacity-60" data-alt="Close-up portrait of a young man with neutral expression, soft indoor lighting, showing facial structure from seven days ago" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCVJm_94YaxwVlWw4aUihiio3djWTLhz0yZHSy2CYliphnsBoIi-pkpIEOPnZU2-snsbWfZQy9ZQJBQQ48khF7ZjUmxk8_yXM69_CAxquD_mVftMsz31EdtKzoOPl_mDY5b7d46yPCw9u4y4m6ooUb2Ov3yc41q1MEWkBhOuGzxO3QFerbNITtSYHyLoGrItd95yXAbuw_iUrgLNtGvJdJ2eAXmNz1WS_pkN_VMuqaNtImXHEPHlhh3vq4SBlrge70BQXQOROnWUrI"/>
+</div>
+<div class="absolute bottom-3 left-3 bg-surface/80 backdrop-blur-md px-3 py-1 rounded-full">
+<p class="text-[10px] font-bold text-on-surface-variant">BEFORE</p>
+</div>
+</div>
+<div class="relative group">
+<div class="aspect-[3/4] rounded-lg overflow-hidden border-2 border-primary/30 bg-surface-container-highest">
+<img class="w-full h-full object-cover" data-alt="Close-up portrait of the same young man with sharper jawline and clearer skin, dramatic lighting highlighting facial improvements" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8x8PuXAJ4bJHiLQrJ8kzuhoMyU_icGEEcFxJksSqt2_09B_cxsCj_iAMukN_9pTalf60D5aC5zuNfn05RXPO7qDGKq9deUgoW-OBx052420jrkWt2RjVY-ZkAVylgMhqOq4MTFiYH3U3N9WtEykhliD8t7YHl2tiV3y4SVi5l1bSvu4BWXZ_kdLTtc7mmkRxX6Vpx5XJO8jWDYV2i3CmpicivdMocXsRfKILSbQ1nObmkbcDjYykifB-BUhZCOWcrNGblJFhj2Rc"/>
+</div>
+<div class="absolute bottom-3 left-3 bg-primary px-3 py-1 rounded-full">
+<p class="text-[10px] font-bold text-on-primary">TODAY</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Growth Score Card -->
+<section class="relative">
+<div class="bg-surface-container-high rounded-lg p-8 shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden relative border border-outline-variant/10">
+<div class="absolute -top-12 -right-12 w-32 h-32 bg-primary/10 blur-3xl rounded-full"></div>
+<div class="relative z-10 flex flex-col items-center text-center">
+<p class="text-on-surface-variant text-sm font-medium mb-2">Face Growth Score</p>
+<div class="flex items-baseline gap-2">
+<span class="text-7xl font-extrabold tracking-tighter kinetic-text">71</span>
+<div class="bg-secondary text-on-secondary-fixed text-sm font-black px-3 py-1 rounded-full flex items-center gap-1 mb-4 shadow-[0_0_20px_rgba(67,243,217,0.3)]">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+                            +4
+                        </div>
+</div>
+<p class="text-on-surface-variant text-xs mt-4">Up from <span class="text-on-surface font-bold">67</span> last Monday</p>
+</div>
+</div>
+</section>
+<!-- Progress Graph -->
+<section class="bg-surface-container rounded-lg p-6 space-y-6">
+<div class="flex justify-between items-center">
+<h3 class="font-bold text-on-surface">Trend Analysis</h3>
+<span class="text-[10px] text-on-surface-variant font-bold">JAN 14 — JAN 21</span>
+</div>
+<div class="h-32 flex items-end justify-between gap-1">
+<div class="w-full bg-surface-container-highest rounded-t-sm h-[60%] relative group">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">67</div>
+</div>
+<div class="w-full bg-surface-container-highest rounded-t-sm h-[62%]"></div>
+<div class="w-full bg-surface-container-highest rounded-t-sm h-[65%]"></div>
+<div class="w-full bg-primary/40 rounded-t-sm h-[68%]"></div>
+<div class="w-full bg-primary/60 rounded-t-sm h-[72%]"></div>
+<div class="w-full bg-primary/80 rounded-t-sm h-[85%]"></div>
+<div class="w-full kinetic-gradient rounded-t-sm h-[100%] shadow-[0_0_15px_rgba(168,164,255,0.4)]"></div>
+</div>
+<div class="flex justify-between text-[10px] text-on-surface-variant font-bold px-1">
+<span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+</div>
+</section>
+<!-- Category Breakdown -->
+<section class="space-y-4">
+<h3 class="font-bold text-on-surface px-1">Metric Breakdown</h3>
+<div class="space-y-4">
+<!-- Item 1 -->
+<div class="bg-surface-container-low p-4 rounded-lg">
+<div class="flex justify-between mb-3 items-center">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">architecture</span>
+<span class="text-sm font-semibold">Jawline Definition</span>
+</div>
+<span class="text-secondary font-bold text-xs">+8%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full kinetic-gradient w-[78%] rounded-full"></div>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="bg-surface-container-low p-4 rounded-lg">
+<div class="flex justify-between mb-3 items-center">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">face</span>
+<span class="text-sm font-semibold">Skin Clarity</span>
+</div>
+<span class="text-secondary font-bold text-xs">+12%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full kinetic-gradient w-[64%] rounded-full"></div>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="bg-surface-container-low p-4 rounded-lg">
+<div class="flex justify-between mb-3 items-center">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">balance</span>
+<span class="text-sm font-semibold">Facial Symmetry</span>
+</div>
+<span class="text-secondary font-bold text-xs">+3%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full kinetic-gradient w-[89%] rounded-full"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- AI Coach Insights -->
+<section class="bg-primary/5 rounded-lg border border-primary/10 p-6 space-y-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">psychology</span>
+</div>
+<div>
+<h4 class="font-bold text-on-surface">GrowUp Coach</h4>
+<p class="text-[10px] text-primary font-bold uppercase tracking-widest">AI Intelligence</p>
+</div>
+</div>
+<ul class="space-y-3">
+<li class="flex gap-3 items-start">
+<span class="material-symbols-outlined text-secondary text-lg">check_circle</span>
+<p class="text-sm text-on-surface-variant leading-relaxed">Better hydration patterns detected in skin texture analysis since Wednesday.</p>
+</li>
+<li class="flex gap-3 items-start">
+<span class="material-symbols-outlined text-secondary text-lg">check_circle</span>
+<p class="text-sm text-on-surface-variant leading-relaxed">Masseter muscle activation suggests effective routine consistency.</p>
+</li>
+<li class="flex gap-3 items-start">
+<span class="material-symbols-outlined text-secondary text-lg">check_circle</span>
+<p class="text-sm text-on-surface-variant leading-relaxed">Lower orbital fat reduction observed in your latest 3D scan.</p>
+</li>
+</ul>
+</section>
+<!-- Share CTA -->
+<button class="w-full kinetic-gradient py-5 rounded-xl flex items-center justify-center gap-3 active:scale-95 duration-200 shadow-[0_20px_40px_-10px_rgba(168,164,255,0.4)]">
+<span class="material-symbols-outlined text-on-primary-fixed" style="font-variation-settings: 'FILL' 1;">share</span>
+<span class="font-bold text-on-primary-fixed">Share Progress to Stories</span>
+</button>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full h-24 bg-[#0c0c1f]/90 backdrop-blur-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.5)] flex justify-around items-center px-4 pb-4 z-50 rounded-t-[3rem]">
+<a class="flex flex-col items-center justify-center text-slate-500 py-2 hover:text-[#a8a4ff] transition-colors active:scale-90 duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-semibold tracking-wider uppercase">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 py-2 hover:text-[#a8a4ff] transition-colors active:scale-90 duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-semibold tracking-wider uppercase">Growth</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-[#a8a4ff]/20 text-[#43f3d9] rounded-full px-6 py-2 transition-all active:scale-90 duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">analytics</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-semibold tracking-wider uppercase">Insights</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 py-2 hover:text-[#a8a4ff] transition-colors active:scale-90 duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-semibold tracking-wider uppercase">Profile</span>
+</a>
+</nav>
+</body></html>

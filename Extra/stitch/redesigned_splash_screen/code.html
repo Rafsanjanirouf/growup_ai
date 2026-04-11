@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-low": "#111127",
+                    "error-container": "#a70138",
+                    "inverse-primary": "#5044e3",
+                    "tertiary-dim": "#efc900",
+                    "surface-dim": "#0c0c1f",
+                    "on-primary-fixed-variant": "#1d0098",
+                    "surface-container-high": "#1d1d37",
+                    "secondary-fixed-dim": "#29e4cb",
+                    "primary-container": "#9995ff",
+                    "surface-container": "#17172f",
+                    "on-secondary-container": "#ddfff6",
+                    "tertiary-fixed": "#ffd709",
+                    "outline-variant": "#46465c",
+                    "on-tertiary-fixed-variant": "#665500",
+                    "surface-tint": "#a8a4ff",
+                    "surface-container-lowest": "#000000",
+                    "on-secondary-fixed-variant": "#006155",
+                    "primary-fixed": "#9995ff",
+                    "tertiary-fixed-dim": "#efc900",
+                    "secondary-fixed": "#43f3d9",
+                    "on-error-container": "#ffb2b9",
+                    "tertiary-container": "#ffd709",
+                    "tertiary": "#ffe792",
+                    "on-background": "#e5e3ff",
+                    "primary-fixed-dim": "#8a85ff",
+                    "surface-variant": "#23233f",
+                    "surface": "#06061a",
+                    "primary-dim": "#675df9",
+                    "on-secondary-fixed": "#004239",
+                    "secondary-container": "#006b5e",
+                    "surface-bright": "#292948",
+                    "on-secondary": "#00574c",
+                    "on-primary-container": "#16007d",
+                    "error": "#ff6e84",
+                    "on-primary-fixed": "#000000",
+                    "error-dim": "#d73357",
+                    "on-tertiary": "#655400",
+                    "inverse-on-surface": "#53536a",
+                    "secondary-dim": "#29e4cb",
+                    "primary": "#6C63FF",
+                    "on-primary": "#ffffff",
+                    "background": "#06061a",
+                    "surface-container-highest": "#23233f",
+                    "on-surface": "#e5e3ff",
+                    "on-surface-variant": "#aaa8c3",
+                    "on-tertiary-container": "#5b4b00",
+                    "inverse-surface": "#fcf8ff",
+                    "on-tertiary-fixed": "#453900",
+                    "outline": "#74738b",
+                    "secondary": "#00D9C0",
+                    "on-error": "#490013"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Plus Jakarta Sans"],
+                    "body": ["Plus Jakarta Sans"],
+                    "label": ["Plus Jakarta Sans"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(2deg); }
+        }
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.1); }
+        }
+        @keyframes drift {
+            from { transform: translate(0, 0); }
+            to { transform: translate(-50px, -50px); }
+        }
+        .hero-gradient {
+            background: linear-gradient(135deg, #6C63FF 0%, #00D9C0 100%);
+        }
+        .hero-text {
+            background: linear-gradient(135deg, #6C63FF 0%, #00D9C0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .mesh-bg {
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(243, 100%, 69%, 0.15) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(173, 100%, 43%, 0.1) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(243, 100%, 69%, 0.15) 0, transparent 50%);
+        }
+        .particle {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.2;
+            pointer-events: none;
+        }
+        body {
+            min-height: 100dvh;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface selection:bg-primary/30 min-h-screen flex items-center justify-center overflow-hidden">
+<!-- Kinetic Background System -->
+<div class="fixed inset-0 pointer-events-none z-0 mesh-bg">
+<!-- Floating Particles (Simulated) -->
+<div class="particle w-1 h-1 top-[20%] left-[10%] animate-[float_4s_infinite]"></div>
+<div class="particle w-1.5 h-1.5 top-[60%] left-[85%] animate-[float_6s_infinite]"></div>
+<div class="particle w-1 h-1 top-[15%] left-[75%] animate-[float_5s_infinite]"></div>
+<div class="particle w-2 h-2 top-[80%] left-[20%] animate-[float_7s_infinite]"></div>
+<!-- Large Glowing Orbs -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] animate-[pulse-glow_8s_infinite]"></div>
+<div class="absolute top-1/3 left-1/4 w-[400px] h-[400px] bg-secondary/5 rounded-full blur-[100px] animate-[pulse-glow_12s_infinite_alt]"></div>
+<!-- Mesh Lines -->
+<div class="absolute inset-0 opacity-[0.05]" style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 40px 40px;"></div>
+</div>
+<!-- Main Splash Container -->
+<main class="relative z-10 w-full max-w-4xl px-6 flex flex-col items-center justify-center text-center">
+<!-- Hero Section -->
+<div class="flex flex-col items-center">
+<!-- Animated Logo Container -->
+<div class="relative mb-12 group">
+<!-- Premium Glow Rings -->
+<div class="absolute inset-0 hero-gradient blur-3xl opacity-20 scale-150 rounded-full group-hover:opacity-40 transition-opacity duration-1000"></div>
+<!-- Main Branding -->
+<div class="relative flex flex-col items-center animate-[float_6s_ease-in-out_infinite]">
+<div class="mb-4 inline-flex items-center justify-center w-24 h-24 rounded-3xl hero-gradient shadow-[0_0_50px_rgba(108,99,255,0.4)] rotate-12 group-hover:rotate-0 transition-transform duration-700">
+<span class="material-symbols-outlined text-5xl text-white font-bold">rocket_launch</span>
+</div>
+<h1 class="text-7xl md:text-9xl font-headline font-extrabold tracking-tighter hero-text leading-tight filter drop-shadow-2xl">
+                        GrowUp AI
+                    </h1>
+</div>
+</div>
+<!-- Tagline & Description -->
+<div class="flex flex-col items-center space-y-6 max-w-lg">
+<div class="overflow-hidden">
+<p class="text-xl md:text-3xl font-bold tracking-[0.15em] text-white uppercase opacity-90 animate-[translateY_1s_ease-out]">
+                        Ascend to Your Peak
+                    </p>
+</div>
+<p class="text-base md:text-lg text-on-surface-variant/70 font-light leading-relaxed max-w-md">
+                    Experience the future of personal aesthetics. Driven by intelligence, defined by you.
+                </p>
+<!-- Kinetic Action Button -->
+<div class="pt-10">
+<button class="group relative px-10 py-5 rounded-2xl hero-gradient text-white font-bold text-lg transition-all hover:scale-105 active:scale-95 shadow-[0_20px_40px_-15px_rgba(108,99,255,0.5)] overflow-hidden">
+<span class="relative z-10 flex items-center gap-3">
+                            Initiate Core
+                            <span class="material-symbols-outlined text-2xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</span>
+<!-- Shimmer Effect -->
+<div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+</button>
+</div>
+</div>
+</div>
+<!-- Footer Metrics -->
+<div class="absolute bottom-[-15vh] md:bottom-[-10vh] w-full flex justify-between items-center px-4 max-w-4xl mx-auto">
+<div class="flex flex-col items-start gap-1">
+<span class="text-[10px] font-bold tracking-[0.3em] text-on-surface-variant/40 uppercase">Neural Status</span>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-secondary shadow-[0_0_12px_rgba(0,217,192,0.6)] animate-pulse"></div>
+<span class="text-xs font-semibold text-secondary tracking-wide">AI CORE ACTIVE</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="text-[10px] font-bold tracking-[0.3em] text-on-surface-variant/40 uppercase">Engine Build</span>
+<span class="text-xs font-mono text-on-surface-variant/60">v4.5.0-ASCEND</span>
+</div>
+</div>
+</main>
+<!-- Grain Overlay -->
+<div class="fixed inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+</body></html>

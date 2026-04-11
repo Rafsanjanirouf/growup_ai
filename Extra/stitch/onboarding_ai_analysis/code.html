@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GrowUp AI - AI Face Analysis Onboarding</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-low": "#111127",
+                        "error-container": "#a70138",
+                        "inverse-primary": "#5044e3",
+                        "tertiary-dim": "#efc900",
+                        "surface-dim": "#0c0c1f",
+                        "on-primary-fixed-variant": "#1d0098",
+                        "surface-container-high": "#1d1d37",
+                        "secondary-fixed-dim": "#29e4cb",
+                        "primary-container": "#9995ff",
+                        "surface-container": "#17172f",
+                        "on-secondary-container": "#ddfff6",
+                        "tertiary-fixed": "#ffd709",
+                        "outline-variant": "#46465c",
+                        "on-tertiary-fixed-variant": "#665500",
+                        "surface-tint": "#a8a4ff",
+                        "surface-container-lowest": "#000000",
+                        "on-secondary-fixed-variant": "#006155",
+                        "primary-fixed": "#9995ff",
+                        "tertiary-fixed-dim": "#efc900",
+                        "secondary-fixed": "#43f3d9",
+                        "on-error-container": "#ffb2b9",
+                        "tertiary-container": "#ffd709",
+                        "tertiary": "#ffe792",
+                        "on-background": "#e5e3ff",
+                        "primary-fixed-dim": "#8a85ff",
+                        "surface-variant": "#23233f",
+                        "surface": "#0c0c1f",
+                        "primary-dim": "#675df9",
+                        "on-secondary-fixed": "#004239",
+                        "secondary-container": "#006b5e",
+                        "surface-bright": "#292948",
+                        "on-secondary": "#00574c",
+                        "on-primary-container": "#16007d",
+                        "error": "#ff6e84",
+                        "on-primary-fixed": "#000000",
+                        "error-dim": "#d73357",
+                        "on-tertiary": "#655400",
+                        "inverse-on-surface": "#53536a",
+                        "secondary-dim": "#29e4cb",
+                        "primary": "#a8a4ff",
+                        "on-primary": "#1e009f",
+                        "background": "#0c0c1f",
+                        "surface-container-highest": "#23233f",
+                        "on-surface": "#e5e3ff",
+                        "on-surface-variant": "#aaa8c3",
+                        "on-tertiary-container": "#5b4b00",
+                        "inverse-surface": "#fcf8ff",
+                        "on-tertiary-fixed": "#453900",
+                        "outline": "#74738b",
+                        "secondary": "#43f3d9",
+                        "on-error": "#490013"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Plus Jakarta Sans"],
+                        "label": ["Plus Jakarta Sans"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0c0c1f;
+        }
+        .kinetic-gradient {
+            background: linear-gradient(135deg, #6C63FF 0%, #00D9C0 100%);
+        }
+        .glass-panel {
+            background: rgba(41, 41, 72, 0.4);
+            backdrop-filter: blur(24px);
+        }
+        .glow-overlay {
+            background: radial-gradient(circle at 50% 50%, rgba(108, 99, 255, 0.15) 0%, transparent 70%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-on-surface min-h-screen flex flex-col overflow-hidden">
+<!-- Top Navigation Anchor (Suppressed context: Onboarding, but using TopAppBar logic for Brand presence if needed - here simplified as per 'Linear/Transactional' rule to maintain focus, but keeping Logo for identity) -->
+<header class="w-full px-8 py-10 flex justify-between items-center z-20">
+<div class="text-xl font-extrabold bg-gradient-to-br from-[#6C63FF] to-[#00D9C0] bg-clip-text text-transparent tracking-tight">
+            GrowUp AI
+        </div>
+<button class="text-on-surface-variant font-bold text-sm tracking-widest uppercase hover:text-secondary transition-colors">
+            Skip
+        </button>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 relative flex flex-col items-center justify-center px-6 pb-20">
+<!-- Background Decor: Kinetic Nebula -->
+<div class="absolute inset-0 pointer-events-none overflow-hidden">
+<div class="absolute -top-24 -left-24 w-96 h-96 bg-primary/10 rounded-full blur-[120px]"></div>
+<div class="absolute top-1/2 -right-24 w-80 h-80 bg-secondary/10 rounded-full blur-[100px]"></div>
+</div>
+<!-- Kinetic Graphic: Abstract AI Face Scan -->
+<div class="relative w-full max-w-sm aspect-square flex items-center justify-center mb-12">
+<!-- Central Face Graphic with Glassmorphism and Gradients -->
+<div class="relative w-72 h-72 rounded-3xl overflow-hidden glass-panel border border-white/5 flex items-center justify-center">
+<img class="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-80" data-alt="abstract futuristic human face silhouette with glowing cyan digital scan lines and neon violet data points on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxFCZmRK6bmtvMzrf45zidJtI3jaZTUhj67RbpKTvlSX3TZDJRM4CW5Hz2PH6GCOgcddrcBYkG_jcptBpE_V0s8HeyelmNtg0Y8drtxffMmRGsYm3wXtxX0zxrwEGS2HmCXZmz3dBx-NDzozxl86nsq86tMQzVZmEF57S3ZxRYtWePgYsFzWhu9LHCcKDhCX58ooIWSZJssq0v5YmzFOmdo999c-Ssg7J3iqJIoJCuuJq6EAufxSIqw9GIGOoVD7ntZVgD57sS_kw"/>
+<!-- Scanning Effect Overlays -->
+<div class="absolute inset-x-0 top-0 h-1 kinetic-gradient shadow-[0_0_15px_#00D9C0] opacity-50"></div>
+<!-- AI Nodes Overlay -->
+<div class="absolute inset-0 flex items-center justify-center p-8">
+<div class="w-full h-full border border-secondary/20 rounded-full animate-pulse flex items-center justify-center">
+<div class="w-3/4 h-3/4 border border-primary/20 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-5xl opacity-80" style="font-variation-settings: 'FILL' 1;">
+                               face_retouching_natural
+                           </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Data Chips (Asymmetric Layout) -->
+<div class="absolute -top-4 -right-2 glass-panel px-4 py-2 rounded-xl shadow-2xl">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="text-[10px] font-bold tracking-tighter text-secondary">50+ LANDMARKS</span>
+</div>
+</div>
+<div class="absolute bottom-10 -left-4 glass-panel px-4 py-2 rounded-xl shadow-2xl">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-[10px] font-bold tracking-tighter text-primary">ACCURACY 99.4%</span>
+</div>
+</div>
+</div>
+<!-- Editorial Typography -->
+<div class="text-center max-w-md">
+<h1 class="text-5xl md:text-6xl font-extrabold tracking-tight text-on-surface mb-6 leading-none">
+                Discover Your <span class="bg-gradient-to-br from-[#6C63FF] to-[#00D9C0] bg-clip-text text-transparent">Potential</span>
+</h1>
+<p class="text-on-surface-variant text-lg leading-relaxed px-4">
+                Our AI analyzes 50+ facial landmarks to give you a detailed improvement plan tailored for your unique features.
+            </p>
+</div>
+</main>
+<!-- Bottom Action & Navigation Anchor -->
+<footer class="w-full px-8 pb-12 flex flex-col items-center gap-10">
+<!-- Pagination Dots -->
+<div class="flex gap-3">
+<div class="w-2 h-2 rounded-full bg-on-surface-variant/30"></div>
+<div class="w-6 h-2 rounded-full kinetic-gradient"></div>
+<div class="w-2 h-2 rounded-full bg-on-surface-variant/30"></div>
+<div class="w-2 h-2 rounded-full bg-on-surface-variant/30"></div>
+</div>
+<!-- Primary Action Unit -->
+<div class="w-full max-w-xs">
+<button class="kinetic-gradient w-full py-5 rounded-xl text-black font-bold text-lg shadow-[0_20px_40px_rgba(108,99,255,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3">
+                Next
+                <span class="material-symbols-outlined font-bold">arrow_forward</span>
+</button>
+</div>
+</footer>
+<!-- Background Layering: Depth Tints -->
+<div class="fixed inset-0 bg-surface-dim -z-50"></div>
+<div class="fixed top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_120%,#1a1a3a_0%,#0c0c1f_100%)] -z-40"></div>
+</body></html>

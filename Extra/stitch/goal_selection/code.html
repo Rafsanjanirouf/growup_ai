@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GrowUp AI - Goal Selection</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-low": "#111127",
+            "error-container": "#a70138",
+            "inverse-primary": "#5044e3",
+            "tertiary-dim": "#efc900",
+            "surface-dim": "#0c0c1f",
+            "on-primary-fixed-variant": "#1d0098",
+            "surface-container-high": "#1d1d37",
+            "secondary-fixed-dim": "#29e4cb",
+            "primary-container": "#9995ff",
+            "surface-container": "#17172f",
+            "on-secondary-container": "#ddfff6",
+            "tertiary-fixed": "#ffd709",
+            "outline-variant": "#46465c",
+            "on-tertiary-fixed-variant": "#665500",
+            "surface-tint": "#a8a4ff",
+            "surface-container-lowest": "#000000",
+            "on-secondary-fixed-variant": "#006155",
+            "primary-fixed": "#9995ff",
+            "tertiary-fixed-dim": "#efc900",
+            "secondary-fixed": "#43f3d9",
+            "on-error-container": "#ffb2b9",
+            "tertiary-container": "#ffd709",
+            "tertiary": "#ffe792",
+            "on-background": "#e5e3ff",
+            "primary-fixed-dim": "#8a85ff",
+            "surface-variant": "#23233f",
+            "surface": "#0c0c1f",
+            "primary-dim": "#675df9",
+            "on-secondary-fixed": "#004239",
+            "secondary-container": "#006b5e",
+            "surface-bright": "#292948",
+            "on-secondary": "#00574c",
+            "on-primary-container": "#16007d",
+            "error": "#ff6e84",
+            "on-primary-fixed": "#000000",
+            "error-dim": "#d73357",
+            "on-tertiary": "#655400",
+            "inverse-on-surface": "#53536a",
+            "secondary-dim": "#29e4cb",
+            "primary": "#a8a4ff",
+            "on-primary": "#1e009f",
+            "background": "#0c0c1f",
+            "surface-container-highest": "#23233f",
+            "on-surface": "#e5e3ff",
+            "on-surface-variant": "#aaa8c3",
+            "on-tertiary-container": "#5b4b00",
+            "inverse-surface": "#fcf8ff",
+            "on-tertiary-fixed": "#453900",
+            "outline": "#74738b",
+            "secondary": "#43f3d9",
+            "on-error": "#490013"
+          },
+          "borderRadius": {
+            "DEFAULT": "1rem",
+            "lg": "2rem",
+            "xl": "3rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Plus Jakarta Sans"],
+            "body": ["Plus Jakarta Sans"],
+            "label": ["Plus Jakarta Sans"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .kinetic-gradient {
+      background: linear-gradient(135deg, #6C63FF 0%, #00D9C0 100%);
+    }
+    .ghost-border {
+      outline: 1px solid rgba(70, 70, 92, 0.15);
+    }
+    .active-card-glow {
+      box-shadow: 0 0 20px rgba(67, 243, 217, 0.15);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30 min-h-screen flex flex-col">
+<!-- TopAppBar Context: Linear/Transactional Navigation is suppressed. Header used for branding and progress. -->
+<header class="bg-surface/80 dark:bg-[#0c0c1f]/80 backdrop-blur-3xl docked full-width top-0 z-50 sticky shadow-2xl shadow-[#0c0c1f]/20 flex justify-between items-center px-6 py-4 w-full">
+<div class="flex items-center gap-3">
+<span class="text-xl font-extrabold bg-gradient-to-br from-[#6C63FF] to-[#00D9C0] bg-clip-text text-transparent font-headline tracking-tight">GrowUp AI</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="text-right hidden sm:block">
+<p class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Step 2 of 3</p>
+<div class="h-1 w-24 bg-surface-container-highest rounded-full mt-1 overflow-hidden">
+<div class="h-full kinetic-gradient w-2/3"></div>
+</div>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-[#a8a4ff] scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined">close</span>
+</div>
+</div>
+</header>
+<main class="flex-grow container max-w-2xl mx-auto px-6 pt-12 pb-32">
+<!-- Editorial Headline -->
+<div class="mb-12">
+<h1 class="text-5xl md:text-6xl font-extrabold font-headline tracking-tighter text-on-surface leading-[1.1] mb-4">
+        What are your <span class="bg-gradient-to-br from-[#6C63FF] to-[#00D9C0] bg-clip-text text-transparent">goals?</span>
+</h1>
+<p class="text-on-surface-variant text-lg max-w-md">
+        Select at least 3 to personalize your journey. Our AI uses these to tailor your growth path.
+      </p>
+</div>
+<!-- Goal Selection Grid: Bento Style -->
+<div class="grid grid-cols-2 gap-4">
+<!-- Card: Sharper Jawline (Inactive) -->
+<button class="flex flex-col items-start p-6 rounded-lg bg-surface-container-high ghost-border hover:bg-surface-bright transition-all group relative overflow-hidden">
+<div class="w-12 h-12 rounded-xl bg-surface-container-lowest flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary" data-icon="face">face</span>
+</div>
+<p class="font-bold text-lg leading-tight text-left">Sharper<br/>Jawline</p>
+<div class="absolute top-4 right-4 opacity-0 group-hover:opacity-20">
+<span class="material-symbols-outlined text-4xl">check_circle</span>
+</div>
+</button>
+<!-- Card: Clearer Skin (Selected) -->
+<button class="flex flex-col items-start p-6 rounded-lg bg-surface-container-high border-2 border-secondary active-card-glow transition-all relative overflow-hidden text-left">
+<div class="w-12 h-12 rounded-xl kinetic-gradient flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-white" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<p class="font-bold text-lg leading-tight">Clearer<br/>Skin</p>
+<div class="absolute top-4 right-4 text-secondary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</button>
+<!-- Card: Better Hair (Inactive) -->
+<button class="flex flex-col items-start p-6 rounded-lg bg-surface-container-high ghost-border hover:bg-surface-bright transition-all group relative overflow-hidden">
+<div class="w-12 h-12 rounded-xl bg-surface-container-lowest flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary" data-icon="content_cut">content_cut</span>
+</div>
+<p class="font-bold text-lg leading-tight text-left">Better<br/>Hair</p>
+</button>
+<!-- Card: Confident Posture (Selected) -->
+<button class="flex flex-col items-start p-6 rounded-lg bg-surface-container-high border-2 border-secondary active-card-glow transition-all relative overflow-hidden text-left">
+<div class="w-12 h-12 rounded-xl kinetic-gradient flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-white" data-icon="accessibility_new">accessibility_new</span>
+</div>
+<p class="font-bold text-lg leading-tight">Confident<br/>Posture</p>
+<div class="absolute top-4 right-4 text-secondary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</button>
+<!-- Card: Style Upgrade (Selected) -->
+<button class="flex flex-col items-start p-6 rounded-lg bg-surface-container-high border-2 border-secondary active-card-glow transition-all relative overflow-hidden text-left">
+<div class="w-12 h-12 rounded-xl kinetic-gradient flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-white" data-icon="checkroom">checkroom</span>
+</div>
+<p class="font-bold text-lg leading-tight">Style<br/>Upgrade</p>
+<div class="absolute top-4 right-4 text-secondary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</button>
+<!-- Card: Fitness Growth (Inactive) -->
+<button class="flex flex-col items-start p-6 rounded-lg bg-surface-container-high ghost-border hover:bg-surface-bright transition-all group relative overflow-hidden">
+<div class="w-12 h-12 rounded-xl bg-surface-container-lowest flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary" data-icon="fitness_center">fitness_center</span>
+</div>
+<p class="font-bold text-lg leading-tight text-left">Fitness<br/>Growth</p>
+</button>
+</div>
+<!-- Background Decoration (Kinetic Nebula Aesthetic) -->
+<div class="fixed top-1/4 -right-20 w-96 h-96 kinetic-gradient opacity-10 rounded-full blur-[120px] pointer-events-none"></div>
+<div class="fixed bottom-0 -left-20 w-64 h-64 bg-primary opacity-5 rounded-full blur-[100px] pointer-events-none"></div>
+</main>
+<!-- CTA Section: Fixed at bottom -->
+<footer class="fixed bottom-0 left-0 w-full p-8 flex justify-center z-50">
+<div class="w-full max-w-2xl">
+<!-- Kinetic Nebula Floating Bar -->
+<div class="bg-surface-container-lowest/80 backdrop-blur-2xl rounded-xl p-4 ghost-border flex items-center justify-between shadow-2xl shadow-surface-container-lowest/40">
+<div class="pl-4 hidden sm:block">
+<p class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-1">Status</p>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<span class="text-sm font-semibold">3 Goals Selected</span>
+</div>
+</div>
+<button class="kinetic-gradient text-white px-10 py-4 rounded-xl font-extrabold text-lg flex items-center gap-3 shadow-lg shadow-[#6C63FF]/30 hover:scale-[1.02] active:scale-95 transition-all w-full sm:w-auto justify-center">
+          Continue
+          <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</div>
+</footer>
+<!-- Visual Polish Overlay -->
+<div class="fixed inset-0 pointer-events-none border-[32px] border-surface z-40 hidden lg:block opacity-50"></div>
+</body></html>

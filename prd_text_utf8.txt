@@ -1,0 +1,1102 @@
+﻿
+ðŸ’ª
+
+GrowUp AI
+Product Requirements Document
+
+Version 3.0  â€¢  Flutter + Firebase  â€¢  2025
+
+Product
+GrowUp AI â€” Lookmaxxing & Self-Improvement App
+Platform
+Android + iOS (Flutter) â€” Play Store & App Store
+Version
+3.0 (Complete Flutter + Firebase Build)
+Owner
+Rafsan (Solo Developer)
+Tech
+Flutter â€¢ Firebase â€¢ Riverpod â€¢ OpenAI Vision API
+Goal
+50,000+ Downloads  |  â‚¹50k/month revenue
+ðŸ“‹  1. Product Overview
+
+Vision
+GrowUp AI à¦¹à¦²à§‹ à¦à¦•à¦Ÿà¦¿ AI-powered self-improvement app à¦¯à§‡à¦–à¦¾à¦¨à§‡ user à¦ªà§à¦°à¦¤à¦¿à¦¦à¦¿à¦¨ face scan à¦•à¦°à§‡ à¦¤à¦¾à¦° progress track à¦•à¦°à¦¬à§‡, daily routine follow à¦•à¦°à¦¬à§‡, à¦à¦¬à¦‚ premium tools à¦¬à§à¦¯à¦¬à¦¹à¦¾à¦° à¦•à¦°à§‡ à¦¨à¦¿à¦œà§‡à¦•à§‡ improve à¦•à¦°à¦¬à§‡à¥¤
+
+Target Users
+à§§à§¬-à§¨à§® à¦¬à¦›à¦° à¦¬à¦¯à¦¼à¦¸à§€ à¦›à§‡à¦²à§‡
+Lookmaxxing, grooming, skin care à¦¨à¦¿à¦¯à¦¼à§‡ interested
+Self-improvement à¦šà¦¾à¦¯à¦¼ à¦•à¦¿à¦¨à§à¦¤à§ proper guide à¦¨à§‡à¦‡
+Indian market primary, international secondary
+
+Core Problems Solved
+Problem
+GrowUp AI Solution
+User à¦œà¦¾à¦¨à§‡ à¦¨à¦¾ à¦•à§‹à¦¥à¦¾ à¦¥à§‡à¦•à§‡ à¦¶à§à¦°à§ à¦•à¦°à¦¬à§‡
+Personalized AI onboarding + Goal selection
+Motivation à¦¹à¦¾à¦°à¦¿à¦¯à¦¼à§‡ à¦¯à¦¾à¦¯à¦¼
+Streak system + Coin gamification (Duolingo-style)
+Random tips à¦•à¦¾à¦œ à¦•à¦°à§‡ à¦¨à¦¾
+Structured 14-30 day Programs with daily tasks
+Premium à¦¨à¦¿à¦¤à§‡ à¦šà¦¾à¦¯à¦¼ à¦¨à¦¾
+Coin system à¦¦à¦¿à¦¯à¦¼à§‡ soft conversion funnel
+Daily guidance à¦¨à§‡à¦‡
+GrowUp AI Daily Assistant (NEW feature)
+ðŸŽ¨  2. Design System
+
+Color Palette â€” Complete System
+GrowUp AI uses a dark-mode-first, high-energy color system inspired by premium fitness & tech apps like Nike Training Club and Duolingo.
+
+Color Name
+Hex Code
+Usage
+Swatch
+Primary Violet
+#6C63FF
+Buttons, CTA, Highlights
+ 
+Cyan Mint
+#00D9C0
+Secondary accent, Success
+ 
+Deep Navy
+#1A1A2E
+Background (Dark mode)
+ 
+Navy Blue
+#16213E
+Card backgrounds
+ 
+Dark Surface
+#0F3460
+AppBar, Nav bars
+ 
+Coin Gold
+#FFD700
+Coins, Rewards, Badges
+ 
+Success Green
+#4CAF50
+Completed tasks, Streaks
+ 
+Warning Orange
+#FF9800
+Alerts, Notifications
+ 
+Error Red
+#F44336
+Errors, Streak break
+ 
+Pure White
+#FFFFFF
+Text on dark, Cards
+ 
+Light Gray
+#F5F5F5
+Background (Light mode)
+ 
+Dark Gray
+#757575
+Secondary text
+ 
+
+Gradient Combinations
+Gradient Name
+From
+To
+Usage
+Hero Gradient
+#6C63FF
+#00D9C0
+Splash, onboarding backgrounds
+Dark Depth
+#1A1A2E
+#0F3460
+App background, cards
+Gold Rush
+#FFD700
+#FF8C00
+Coin displays, premium badge
+Success Flow
+#4CAF50
+#00D9C0
+Streak complete, task done
+Danger Alert
+#F44336
+#FF9800
+Streak break, errors
+Premium Aura
+#6C63FF
+#9C27B0
+Premium features highlight
+
+Typography â€” Font System
+Primary font: Plus Jakarta Sans (Google Fonts) â€” modern, friendly, high readability. Monospace: Fira Code â€” code snippets, technical displays.
+
+Style
+Font
+Size
+Weight
+Usage
+Display Large
+Plus Jakarta Sans
+32sp
+Bold 700
+App title, splash screen
+Display Medium
+Plus Jakarta Sans
+28sp
+Bold 700
+Score numbers, big stats
+Headline
+Plus Jakarta Sans
+22sp
+SemiBold 600
+Screen titles, section heads
+Title
+Plus Jakarta Sans
+18sp
+SemiBold 600
+Card titles, tab labels
+Body Large
+Plus Jakarta Sans
+16sp
+Regular 400
+Main content, descriptions
+Body Medium
+Plus Jakarta Sans
+14sp
+Regular 400
+Secondary text, hints
+Label
+Plus Jakarta Sans
+12sp
+Medium 500
+Chips, badges, small labels
+Caption
+Plus Jakarta Sans
+10sp
+Regular 400
+Timestamps, fine print
+Code
+Fira Code
+13sp
+Regular 400
+Dev display only
+
+Spacing & Border Radius System
+Token
+Value
+Usage
+space_xs
+4dp
+Icon internal padding
+space_sm
+8dp
+Between small elements
+space_md
+16dp
+Standard component padding
+space_lg
+24dp
+Section spacing
+space_xl
+32dp
+Screen-level padding
+space_xxl
+48dp
+Hero sections
+radius_sm
+8dp
+Chips, small buttons
+radius_md
+16dp
+Cards, dialogs
+radius_lg
+24dp
+Bottom sheets, paywall cards
+radius_xl
+32dp
+Profile avatars, premium badge
+ðŸ“±  3. Screen Architecture
+
+Bottom Navigation (5 Tabs)
+Tab
+Icon
+Screen
+Description
+Home
+ðŸ 
+Dashboard
+Streak, daily tasks, progress overview
+Scan
+ðŸ“·
+Face Scanner
+AI face analysis + history
+Assistant
+ðŸ¤–
+Daily Assistant
+NEW: GrowUp AI Daily Assistant
+Programs
+ðŸ“‹
+Programs List
+All self-improvement programs
+AI Tools
+âœ¨
+Tools Hub
+6 AI-powered appearance tools
+Profile
+ðŸ‘¤
+Profile & Stats
+Settings, coin history, milestones
+
+Full Screen List (24 Screens)
+#
+Screen Name
+Type
+Access
+S01
+Splash Screen
+Onboarding
+Free
+S02
+Onboarding Slides (3)
+Onboarding
+Free
+S03
+Sign Up / Google Login
+Auth
+Free
+S04
+Goal Selection
+Onboarding
+Free
+S05
+Face Scan
+Core
+Free (1/day)
+S06
+Face Score Result
+Core
+Free
+S07
+Soft Paywall
+Monetization
+â€”
+S08
+Home Dashboard
+Main
+Free
+S09
+Task Detail Screen
+Core
+Free
+S10
+Day Complete Celebration
+Retention
+Free
+S11
+Weekly Report (Day 7)
+Milestone
+ðŸª™ 50 coins
+S12
+Daily Assistant Home
+Assistant
+Free (3 chats/day)
+S13
+Assistant Chat Screen
+Assistant
+ðŸª™ coins / Premium
+S14
+Programs List
+Programs
+Free
+S15
+Program Detail
+Programs
+Mixed
+S16
+Active Program Tracker
+Programs
+Mixed
+S17
+AI Tools Hub
+Tools
+Mixed
+S18
+Beard Style AI
+Tool
+Free (2/day)
+S19
+Hair Style AI
+Tool
+ðŸª™ 25 coins
+S20
+Celebrity Face Match
+Tool
+ðŸª™ 30 coins
+S21
+Skin Analyzer
+Tool
+ðŸª™ 25 coins
+S22
+Outfit Style AI
+Tool
+ðŸª™ 20 coins
+S23
+Premium Paywall (Hard)
+Monetization
+â€”
+S24
+Profile & Settings
+Profile
+Free
+ðŸ¤–  4. GrowUp AI Daily Assistant (NEW Feature)
+
+GrowUp AI Daily Assistant à¦¹à¦²à§‹ app-à¦à¦° à¦¸à¦¬à¦šà§‡à¦¯à¦¼à§‡ powerful retention feature â€” à¦à¦•à¦Ÿà¦¿ personal AI coach à¦¯à§‡ user-à¦à¦° daily questions answer à¦•à¦°à¦¬à§‡, personalized advice à¦¦à§‡à¦¬à§‡, à¦à¦¬à¦‚ à¦¤à¦¾à¦° progress track à¦•à¦°à¦¬à§‡à¥¤
+
+Feature Overview
+Property
+Detail
+Feature Name
+GrowUp AI Daily Assistant
+AI Engine
+OpenAI GPT-4o (via API) + Custom System Prompt
+Persona
+"GrowUp Coach" â€” friendly, motivating, knowledgeable
+Access
+Free: 3 messages/day | Coins: ðŸª™ 10/message | Premium: Unlimited
+Languages
+Bengali + English (auto-detect)
+Context
+Knows user's face score, streak, active program, goals
+Memory
+Firebase Firestore â€” stores last 30 days of chat history
+
+Assistant Capabilities
+Capability
+Example Query
+Response Type
+Skincare Advice
+"à¦†à¦®à¦¾à¦° oily skin-à¦à¦° à¦œà¦¨à§à¦¯ à¦•à§€ routine follow à¦•à¦°à¦¬à§‹?"
+Personalized routine based on skin score
+Grooming Guide
+"Beard grow à¦•à¦°à¦¾à¦° fastest way à¦•à§€?"
+Step-by-step daily plan
+Diet & Nutrition
+"Jawline-à¦à¦° à¦œà¦¨à§à¦¯ à¦•à§‹à¦¨ foods avoid à¦•à¦°à¦¤à§‡ à¦¹à¦¬à§‡?"
+Food list + meal tips
+Exercise Guide
+"Daily 10 minute face yoga workout à¦¦à¦¾à¦“"
+Structured workout with reps
+Program Help
+"à¦†à¦œà¦•à§‡à¦° Face Glow task à¦¬à§à¦à¦¤à§‡ à¦ªà¦¾à¦°à¦›à¦¿ à¦¨à¦¾"
+Task explanation + tips
+Motivation Boost
+"Streak à¦­à¦¾à¦™à¦¤à§‡ à¦‡à¦šà§à¦›à§‡ à¦•à¦°à¦›à§‡ à¦¨à¦¾ à¦†à¦œ"
+Motivational message + streak reminder
+Progress Review
+"à¦†à¦®à¦¿ à¦•à¦¿ improve à¦¹à¦šà§à¦›à¦¿?"
+Face score trend + encouragement
+Product Recommend
+"à¦•à§‹à¦¨ sunscreen use à¦•à¦°à¦¬à§‹?"
+Product suggestions for Indian market
+Habit Formation
+"Bad habits à¦•à§€à¦­à¦¾à¦¬à§‡ à¦›à¦¾à¦¡à¦¼à¦¬à§‹?"
+Psychology-based habit breaking plan
+General Q&A
+"Mewing à¦•à¦¿ actually à¦•à¦¾à¦œ à¦•à¦°à§‡?"
+Evidence-based honest answer
+
+Daily Assistant UI Design
+Chat interface â€” WhatsApp-style bubble UI, dark theme
+User bubble: Right side, Primary Violet (#6C63FF) background
+Assistant bubble: Left side, Dark Surface (#0F3460) background, bot avatar
+Top bar: User streak, coin balance, daily message counter (3 free)
+Quick suggestion chips: 4 pre-set questions updated daily
+Voice input: Optional mic button (Flutter speech_to_text package)
+Message limit indicator: 'à¦†à¦œà¦•à§‡à¦° à§©à¦Ÿà¦¿ free message à¦¶à§‡à¦· â€” Coins à¦¦à¦¿à¦¯à¦¼à§‡ à¦šà¦¾à¦²à¦¿à¦¯à¦¼à§‡ à¦¯à¦¾à¦“ ðŸª™'
+
+Assistant System Prompt Structure
+Firebase à¦¥à§‡à¦•à§‡ user data à¦à¦¨à§‡ à¦ªà§à¦°à¦¤à¦¿à¦Ÿà¦¿ API call-à¦ system prompt-à¦ inject à¦•à¦°à¦¾ à¦¹à¦¬à§‡:
+
+You are GrowUp Coach, a friendly AI self-improvement coach for young men.
+User Profile: {name}, Age {age}, Skin type: {skin_type}
+Current face score: {face_score}/100 | Streak: {streak} days
+Active program: {active_program} | Day {program_day}/{program_total}
+Goals: {user_goals} | Language preference: {language}
+Respond in {language}. Be motivating, practical, and concise (max 150 words).
+Always relate advice to user's current score and program.
+
+Firebase Data Structure â€” Assistant
+users/{uid}/assistant_chats/{date}/messages[]
+  - role: 'user' | 'assistant'
+  - content: string
+  - timestamp: Timestamp
+  - coins_used: int
+users/{uid}/assistant_stats/
+  - daily_message_count: int
+  - last_reset_date: Timestamp
+  - total_chats: int
+
+Flutter Implementation â€” Daily Assistant
+Install packages: dio, flutter_riverpod, flutter_chat_ui, speech_to_text
+Create AssistantRepository â€” handles OpenAI API calls + Firestore
+Create AssistantNotifier (Riverpod) â€” manages chat state + message limits
+Build ChatScreen widget â€” custom bubble UI + quick chips
+Implement daily reset logic â€” Firestore timestamp comparison
+Add coin deduction flow â€” check balance before API call
+Stream responses â€” use OpenAI streaming for better UX
+ðŸ”„  5. User Flow by Day
+
+DAY 1 â€” First Time User
+Step
+Screen
+Action
+Key Element
+1
+Splash
+App open
+Logo + tagline animation (Lottie)
+2
+Onboarding
+3 slide swipe
+Feature highlights
+3
+Sign Up
+Google login
+One-tap Firebase Auth
+4
+Goal Select
+Choose goals
+Personalization (stored to Firestore)
+5
+Face Scan â­
+Camera scan
+AHA Moment â€” instant AI analysis
+6
+Score Result
+See score
+67/100 breakdown + improvement plan
+7
+Soft Paywall
+Skip or buy
+'à¦à¦–à¦¨ à¦¨à¦¾' option clearly visible
+8
+Dashboard
+See tasks
+First routine ready + Assistant intro
+
+DAY 7 â€” Conversion Day (Most Important)
+Step
+Action
+Purpose
+Weekly Report
+Face scan again + score compare (e.g. 67 â†’ 71)
+Show proof of improvement
+Breakdown
+Each category growth with chart
+Detailed motivation data
+Assistant Push
+Coach message: 'à¦¤à§à¦®à¦¿ à¦¦à¦¾à¦°à§à¦£ progress à¦•à¦°à¦›à§‹!'
+Emotional engagement
+Hard Paywall
+Premium upsell with Before/After visual
+Conversion trigger
+Social Share
+Share progress card (Instagram-ready)
+Viral loop start
+
+DAY 14 â€” Re-engagement
+New feature unlock: Celebrity Face Match
+'2 Week Warrior' badge à¦¦à§‡à¦“à¦¯à¦¼à¦¾
+Daily Assistant: personalized 14-day review message
+Premium à¦¨à¦¾ à¦¨à¦¿à¦²à§‡ à¦†à¦¬à¦¾à¦° soft upsell
+
+DAY 30 â€” Milestone
+Full Before/After report with 30-day face score graph
+Shareable progress card (Instagram-ready PNG)
+Play Store review request
+Annual plan upsell: â‚¹499/year
+Daily Assistant: 30-day personalized achievement summary
+ðŸ’°  6. Monetization Strategy
+
+Coin System ðŸª™
+Duolingo-inspired engagement loop â€” user coins earn à¦•à¦°à¦¬à§‡ à¦à¦¬à¦‚ premium features unlock à¦•à¦°à¦¤à§‡ à¦–à¦°à¦š à¦•à¦°à¦¬à§‡à¥¤
+
+Coin Earning
+Action
+Coins Earned
+Frequency
+Daily routine complete
+ðŸª™ +10
+Once/day
+Streak maintain (per day)
+ðŸª™ +5
+Daily
+Face scan à¦•à¦°à¦¾
+ðŸª™ +15
+Once/day
+Week complete (Day 7)
+ðŸª™ +50
+Weekly
+New program à¦¶à§à¦°à§
+ðŸª™ +20
+Per program
+Referral (friend invite)
+ðŸª™ +100
+Per referral
+Daily Assistant à¦¬à§à¦¯à¦¬à¦¹à¦¾à¦° (first)
+ðŸª™ +5
+Once/day
+
+Coin Spending
+Feature
+Cost
+Free Limit
+Extra Face Scan
+ðŸª™ 15
+1 free/day
+Hair Style AI
+ðŸª™ 25
+No free
+Celebrity Match
+ðŸª™ 30
+No free
+Skin Analyzer
+ðŸª™ 25
+No free
+Outfit Style AI
+ðŸª™ 20
+No free
+Weekly Report
+ðŸª™ 50
+No free
+Jawline Program
+ðŸª™ 150
+No free
+Quit Bad Habits Program
+ðŸª™ 100
+No free
+Daily Assistant (extra)
+ðŸª™ 10/msg
+3 free/day
+
+Premium Subscription ðŸ‘‘
+Plan
+Price
+Features
+Monthly â­
+â‚¹99/month
+All tools unlimited, all programs, no ads, 50 bonus coins/day, unlimited Assistant
+Yearly
+â‚¹499/year
+Same as monthly + exclusive features, priority AI responses (â‚¹41/month only)
+
+Coin Purchase Packs
+Pack
+Coins
+Price
+Value
+Starter
+100 ðŸª™
+â‚¹29
+Basic â€” covers 3-4 tool uses
+Popular â­
+300 ðŸª™
+â‚¹59
+Best for casual users
+Pro
+1000 ðŸª™
+â‚¹149
+Power users / content creators
+ðŸ› ï¸  7. Complete Flutter Tech Stack
+
+Core Architecture
+Layer
+Technology
+Purpose
+Package
+Frontend
+Flutter 3.x (Dart)
+Cross-platform UI (Android + iOS)
+flutter/flutter
+State Mgmt
+Riverpod 2.x
+App state, providers, async
+flutter_riverpod
+Navigation
+GoRouter
+Declarative routing, deep links
+go_router
+Auth
+Firebase Auth
+Google Sign-In + email auth
+firebase_auth
+Database
+Cloud Firestore
+User data, progress, chats
+cloud_firestore
+Local Storage
+Hive
+Offline streak, cached data
+hive_flutter
+Preferences
+SharedPreferences
+Settings, onboarding flags
+shared_preferences
+AI Face Scan
+Google ML Kit
+Face detection + landmark points
+google_mlkit_face_detection
+AI Tools API
+OpenAI Vision API
+Beard, hair, skin, outfit tools
+dio (HTTP client)
+Daily Assistant
+OpenAI GPT-4o API
+Conversational AI coach
+dio + streaming
+Push Notifs
+Firebase Cloud Msg
+Daily reminders, streak alerts
+firebase_messaging
+Analytics
+Firebase Analytics
+User behavior, funnel tracking
+firebase_analytics
+Crash Report
+Firebase Crashlytics
+Bug tracking, error logs
+firebase_crashlytics
+Payments (IN)
+Cashfree SDK
+Indian UPI + cards
+cashfree_pg
+Payments (Global)
+RevenueCat
+Play Store + App Store billing
+purchases_flutter
+Animations
+Lottie
+Celebration, onboarding animations
+lottie
+Image Pick
+image_picker
+Camera + gallery for scans
+image_picker
+Sharing
+share_plus
+Progress card sharing
+share_plus
+Charts
+fl_chart
+Progress graphs, face score trend
+fl_chart
+Chat UI
+flutter_chat_ui
+Daily Assistant chat interface
+flutter_chat_ui
+Speech Input
+speech_to_text
+Voice messages to Assistant
+speech_to_text
+Caching
+cached_network_image
+Fast image loading
+cached_network_image
+ðŸ”¥  8. Firebase Architecture
+
+Firestore Data Structure
+users/{uid}/
+  profile: { name, email, age, skin_type, goals[], created_at }
+  stats: { streak, coins, face_score, total_scans, premium_status }
+  face_scans/{scanId}: { score, breakdown{}, image_url, timestamp }
+  programs/{programId}: { name, day, completed_days[], start_date }
+  tasks/{date}/items[]: { id, title, completed, coins_earned }
+  assistant_chats/{date}/messages[]: { role, content, timestamp }
+  assistant_stats: { daily_count, last_reset, total_messages }
+  notifications: { fcm_token, enabled, time_preference }
+
+programs/ (global collection)
+  {programId}: { name, duration, tasks_per_day, daily_content[] }
+
+tools_usage/{uid}/
+  {tool_name}: { daily_count, last_used, total_used }
+
+Firebase Security Rules (Key Rules)
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth.uid == userId;
+    }
+    match /programs/{programId} {
+      allow read: if request.auth != null;
+      allow write: if false; // admin only
+    }
+  }
+}
+
+Firebase Cloud Functions (Backend Logic)
+Function
+Trigger
+Action
+onDailyReset
+Scheduled (midnight)
+Reset daily task counts, message limits, coin earn flags
+onStreakCheck
+Scheduled (11:59 PM)
+Check streak breaks, send re-engagement notifications
+onWeeklyReport
+Scheduled (Day 7 for user)
+Generate weekly face score comparison, trigger paywall notification
+onCoinPurchase
+Firestore write (payment)
+Validate payment, add coins to user account
+onPremiumActivate
+Firestore write (sub)
+Enable premium flags, start bonus coins
+onAssistantMessage
+HTTP callable
+Rate limit check, OpenAI API call, save to Firestore
+onReferralComplete
+Firestore write
+Award 100 coins to referrer
+ðŸ“  9. Flutter Project Structure
+
+lib/
+â”œâ”€â”€ main.dart
+â”œâ”€â”€ firebase_options.dart
+â”œâ”€â”€ core/
+â”‚   â”œâ”€â”€ theme/
+â”‚   â”‚   â”œâ”€â”€ app_theme.dart          # Dark + light theme
+â”‚   â”‚   â”œâ”€â”€ colors.dart             # All color constants
+â”‚   â”‚   â”œâ”€â”€ typography.dart         # Text styles
+â”‚   â”‚   â””â”€â”€ spacing.dart            # Spacing tokens
+â”‚   â”œâ”€â”€ constants/
+â”‚   â”‚   â”œâ”€â”€ app_constants.dart
+â”‚   â”‚   â””â”€â”€ firebase_constants.dart
+â”‚   â”œâ”€â”€ router/
+â”‚   â”‚   â””â”€â”€ app_router.dart         # GoRouter config
+â”‚   â””â”€â”€ utils/
+â”‚       â”œâ”€â”€ date_utils.dart
+â”‚       â””â”€â”€ coin_utils.dart
+â”œâ”€â”€ features/
+â”‚   â”œâ”€â”€ auth/
+â”‚   â”‚   â”œâ”€â”€ data/auth_repository.dart
+â”‚   â”‚   â”œâ”€â”€ presentation/screens/login_screen.dart
+â”‚   â”‚   â””â”€â”€ providers/auth_provider.dart
+â”‚   â”œâ”€â”€ onboarding/
+â”‚   â”‚   â”œâ”€â”€ presentation/screens/
+â”‚   â”‚   â””â”€â”€ providers/onboarding_provider.dart
+â”‚   â”œâ”€â”€ dashboard/
+â”‚   â”‚   â”œâ”€â”€ data/task_repository.dart
+â”‚   â”‚   â”œâ”€â”€ presentation/screens/dashboard_screen.dart
+â”‚   â”‚   â””â”€â”€ providers/dashboard_provider.dart
+â”‚   â”œâ”€â”€ face_scan/
+â”‚   â”‚   â”œâ”€â”€ data/face_scan_repository.dart
+â”‚   â”‚   â”œâ”€â”€ ml/face_analyzer.dart   # ML Kit integration
+â”‚   â”‚   â””â”€â”€ presentation/
+â”‚   â”œâ”€â”€ assistant/                  # NEW
+â”‚   â”‚   â”œâ”€â”€ data/assistant_repository.dart
+â”‚   â”‚   â”œâ”€â”€ data/openai_service.dart
+â”‚   â”‚   â”œâ”€â”€ presentation/screens/assistant_screen.dart
+â”‚   â”‚   â”œâ”€â”€ presentation/widgets/chat_bubble.dart
+â”‚   â”‚   â””â”€â”€ providers/assistant_provider.dart
+â”‚   â”œâ”€â”€ programs/
+â”‚   â”œâ”€â”€ ai_tools/
+â”‚   â”œâ”€â”€ monetization/
+â”‚   â””â”€â”€ profile/
+â””â”€â”€ shared/
+    â”œâ”€â”€ widgets/
+    â”‚   â”œâ”€â”€ coin_badge.dart
+    â”‚   â”œâ”€â”€ streak_counter.dart
+    â”‚   â”œâ”€â”€ primary_button.dart
+    â”‚   â””â”€â”€ gradient_card.dart
+    â””â”€â”€ providers/
+        â””â”€â”€ user_provider.dart
+ðŸŽ¨  10. Flutter Theme Implementation
+
+colors.dart â€” Complete Color System
+class AppColors {
+  // Primary
+  static const primary = Color(0xFF6C63FF);
+  static const primaryDark = Color(0xFF4A42CC);
+  static const accent = Color(0xFF00D9C0);
+  // Backgrounds
+  static const bgDark = Color(0xFF1A1A2E);
+  static const bgMid = Color(0xFF16213E);
+  static const surface = Color(0xFF0F3460);
+  // Status
+  static const gold = Color(0xFFFFD700);
+  static const success = Color(0xFF4CAF50);
+  static const warning = Color(0xFFFF9800);
+  static const error = Color(0xFFF44336);
+  // Text
+  static const textPrimary = Color(0xFFFFFFFF);
+  static const textSecondary = Color(0xFFB0B0B0);
+  // Gradients
+  static const heroGradient = LinearGradient(
+    colors: [primary, accent],
+    begin: Alignment.topLeft, end: Alignment.bottomRight);
+  static const darkGradient = LinearGradient(
+    colors: [bgDark, surface],
+    begin: Alignment.topCenter, end: Alignment.bottomCenter);
+}
+
+app_theme.dart â€” ThemeData
+ThemeData get darkTheme => ThemeData(
+  brightness: Brightness.dark,
+  primaryColor: AppColors.primary,
+  scaffoldBackgroundColor: AppColors.bgDark,
+  colorScheme: const ColorScheme.dark(
+    primary: AppColors.primary,
+    secondary: AppColors.accent,
+    surface: AppColors.surface,
+    error: AppColors.error,
+  ),
+  fontFamily: 'PlusJakartaSans',
+  textTheme: AppTypography.textTheme,
+  elevatedButtonTheme: ElevatedButtonThemeData(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: AppColors.primary,
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16)),
+      padding: EdgeInsets.symmetric(h: 24, v: 16),
+    ),
+  ),
+  cardTheme: CardTheme(
+    color: AppColors.bgMid,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16)),
+    elevation: 0,
+  ),
+);
+ðŸ—“ï¸  11. Development Roadmap
+
+4-Week Sprint Plan
+Week
+Goal
+Deliverables
+Priority
+Week 1
+Core Foundation
+Splash, Onboarding, Google Auth, Goal Selection, Face Scan, Dashboard, Theme setup
+ðŸ”´ Critical
+Week 2
+Programs & Tools
+Programs list/detail/tracker, 3 AI tools (Beard/Hair/Skin), Coin system backend
+ðŸ”´ Critical
+Week 3
+Assistant + Monetize
+Daily Assistant full build, Paywall screens, Cashfree/RevenueCat, Push notifications
+ðŸŸ  High
+Week 4
+Polish & Launch
+Streak system, Celebration screens, Weekly report, UI animations, Play Store submit
+ðŸŸ¡ Medium
+Post-Launch
+Growth
+Analytics review, A/B paywall test, More programs, Assistant personalization v2
+ðŸŸ¢ Low
+
+Daily Assistant â€” Detailed Build Plan
+Day
+Task
+Notes
+Day 1
+Setup OpenAI service class + API key in .env
+Never hardcode API keys
+Day 2
+Build AssistantRepository (Firestore read/write)
+Message history + daily counter
+Day 3
+Build AssistantNotifier with Riverpod
+State: messages, loading, limit
+Day 4
+Chat UI â€” flutter_chat_ui + custom theming
+Match app dark theme
+Day 5
+Quick chips + voice input integration
+4 daily suggestion chips
+Day 6
+Coin deduction flow + paywall trigger
+Check coins before API call
+Day 7
+User context injection in system prompt
+Face score, streak, program data
+Day 8
+Streaming responses (OpenAI SSE)
+Better UX â€” words appear live
+Day 9
+Firebase Cloud Function for rate limiting
+Server-side limit validation
+Day 10
+Testing + edge cases + error handling
+Network errors, empty states
+âš™ï¸  12. Features & Programs
+
+Programs ðŸ“‹
+Program
+Duration
+Access
+Daily Tasks
+Face Glow Program
+30 days
+âœ… Free
+Skincare routine, hydration, 8hr sleep
+Jawline Sculptor
+21 days
+ðŸª™ 150 coins
+Jaw exercises, mewing technique, diet tips
+Quit Bad Habits
+30 days
+ðŸª™ 100 coins
+Daily check-ins, replacement habits, journal
+Hair Growth Program
+28 days
+ðŸª™ 120 coins
+Oil massage, protein diet, styling guide
+Skin Care 30 Days
+30 days
+ðŸª™ 200 coins
+Cleanser, moisturizer, SPF, night routine
+Confidence Builder
+14 days
+Premium only
+Daily challenges, posture, voice exercises
+Morning Alpha Routine
+21 days
+ðŸª™ 130 coins
+Cold shower, grooming, mindset affirmations
+
+AI Tools âœ¨
+Tool
+What it Does
+Access
+API Used
+Beard Style AI
+Face-à¦ different beard styles try-on
+Free (2/day)
+OpenAI Vision + custom overlay
+Hair Style AI
+Different hair length/color styles
+ðŸª™ 25
+OpenAI Vision API
+Celebrity Match
+Find which celebrity you look like
+ðŸª™ 30
+Face++ Recognition API
+Skin Analyzer
+Skin type, pores, dark spots detection
+ðŸª™ 25
+OpenAI Vision API
+Outfit Style AI
+Outfit recommendations based on body
+ðŸª™ 20
+OpenAI Vision API
+Face Score History
+Past scans comparison + progress graph
+Free
+Firebase Firestore
+Daily Assistant
+AI chat coach â€” personalized guidance
+3 free/day
+OpenAI GPT-4o
+ðŸ”¥  13. Retention Strategy
+
+Gamification Elements
+Element
+How it Works
+Retention Impact
+ðŸ”¥ Streak Counter
+à¦ªà§à¦°à¦¤à¦¿à¦¦à¦¿à¦¨ app open à¦•à¦°à¦²à§‡ streak à¦¬à¦¾à¦¡à¦¼à§‡, à¦­à¦¾à¦™à¦²à§‡ à¦¦à§à¦‡ coin penalty
+High â€” loss aversion
+ðŸª™ Coin Earning
+Task complete à¦•à¦°à¦²à§‡ coins à¦ªà¦¾à¦¯à¦¼, premium features unlock à¦•à¦°à¦¤à§‡ à¦–à¦°à¦š
+High â€” reward loop
+ðŸ† Badges
+Day 7, Day 14, Day 30 milestone badges with share option
+Medium â€” social proof
+ðŸ“Š Progress Bar
+Weekly face score progress visual + category breakdown
+High â€” visible improvement
+ðŸ¤– AI Assistant
+Daily personalized message + response to user questions
+Very High â€” relationship
+ðŸŽ‰ Celebration Screen
+Day complete à¦¹à¦²à§‡ confetti + coin animation (Lottie)
+Medium â€” feel good moment
+
+Push Notification Strategy
+Time
+Message
+Goal
+8:00 AM
+Good morning! à¦†à¦œà¦•à§‡à¦° routine ready ðŸ’ª
+Daily open
+8:00 PM
+à¦†à¦œà¦•à§‡à¦° tasks à¦¬à¦¾à¦•à¦¿ à¦†à¦›à§‡! Streak à¦­à¦¾à¦™à¦¤à§‡ à¦¦à¦¿à¦“ à¦¨à¦¾ ðŸ”¥
+Task completion
+Day 6
+à¦•à¦¾à¦² à¦¤à§‹à¦®à¦¾à¦° à§§ à¦¸à¦ªà§à¦¤à¦¾à¦¹! Weekly report ready à¦¹à¦¬à§‡ ðŸŽ‰
+Day 7 conversion prep
+Day 7
+à¦¤à§‹à¦®à¦¾à¦° progress à¦¦à§‡à¦–à§‹ â€” à¦¤à§à¦®à¦¿ improve à¦¹à¦¯à¦¼à§‡à¦›à§‹! ðŸ“ˆ
+Paywall trigger
+3-day gap
+à¦¤à§‹à¦®à¦¾à¦° streak à¦­à¦¾à¦™à¦¤à§‡ à¦šà¦²à§‡à¦›à§‡! à¦«à¦¿à¦°à§‡ à¦†à¦¸à§‹ ðŸ˜¢
+Re-engagement
+Daily 9 AM
+GrowUp Coach: à¦†à¦œ à¦¤à§‹à¦®à¦¾à¦° à¦œà¦¨à§à¦¯ à¦à¦•à¦Ÿà¦¾ tip à¦†à¦›à§‡ ðŸ¤–
+Assistant engagement
+ðŸ“Š  14. Success Metrics & KPIs
+
+Metric
+Current
+3-Month Target
+Measurement
+Day 1 Retention
+~40%
+70%+
+Firebase Analytics
+Day 7 Retention
+~10%
+35%+
+Firebase Analytics
+Day 30 Retention
+~5%
+15%+
+Firebase Analytics
+Premium Conversion
+~1%
+5%+
+RevenueCat dashboard
+Monthly Revenue
+â‚¹0
+â‚¹50,000+
+Play Store + Cashfree
+Monthly Active Users
+Low
+10,000+
+Firebase Analytics
+Play Store Rating
+â€”
+4.5+
+Play Console
+Daily Assistant DAU
+â€”
+40% of users
+Firebase custom event
+Avg Session Duration
+â€”
+8+ minutes
+Firebase Analytics
+Coin Purchase CVR
+â€”
+3%+
+In-app events
+
+GrowUp AI PRD v3.0  â€¢  Built by Rafsan  â€¢  Confidential  â€¢  2025
