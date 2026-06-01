@@ -200,7 +200,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       if (isAuthenticated) {
         Navigator.of(context).pushReplacementNamed('/main-navigation');
       } else {
-        Navigator.of(context).pushReplacementNamed('/onboarding');
+        Navigator.of(context).pushReplacementNamed('/discovery');
       }
     });
   }

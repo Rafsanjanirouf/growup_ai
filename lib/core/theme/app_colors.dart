@@ -1,52 +1,58 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // ===== UNIFIED 4-COLOR PALETTE =====
-  // Primary: Gold/Yellow
+  // ===== UNIFIED MODERN COLOR PALETTE =====
+  // Primary: Vibrant Gold
   static const Color primary = Color(0xFFD4AF37);      // Premium Gold
   static const Color onPrimary = Color(0xFF000000);   // Black text on gold
   
   // Secondary: Emerald Green (accent)
-  static const Color secondary = Color(0xFF1DBF73);   // Vibrant Green
+  static const Color secondary = Color(0xFF00D084);   // Vibrant Green
   static const Color onSecondary = Color(0xFFFFFFFF); // White text on green
   
-  // Tertiary: Sky Blue (more conservative)
+  // Tertiary: Bright Blue
   static const Color tertiary = Color(0xFF2196F3);    // Professional Blue
   static const Color onTertiary = Color(0xFFFFFFFF);  // White text
 
-  // ===== SURFACE TONAL LAYERING (Dark Mode - Optimized for Gold Primary) =====
-  // Ultra-dark surfaces to make gold pop
-  static const Color surfaceLowest = Color(0xFF0D0D0D);    // Pure Black-ish background
-  static const Color surfaceLow = Color(0xFF1A1A1A);       // Very dark gray - Card backgrounds
-  static const Color surface = Color(0xFF1F1F1F);          // Dark gray - Main background
-  static const Color surfaceHigh = Color(0xFF2A2A2A);      // Higher contrast layer
-  static const Color surfaceHighest = Color(0xFF3A3A3A);   // Highest surface layer
-  static const Color surfaceBright = Color(0xFF4A4A4A);    // Bright surface variant
+  // ===== MODERN DARK SURFACES =====
+  static const Color surfaceLowest = Color(0xFF0F0F0F);    // Pure dark background
+  static const Color surfaceLow = Color(0xFF181818);       // Very dark gray
+  static const Color surface = Color(0xFF1D1D1D);          // Main background
+  static const Color surfaceHigh = Color(0xFF272727);      // Higher contrast
+  static const Color surfaceHighest = Color(0xFF333333);   // Highest surface
+  static const Color surfaceBright = Color(0xFF404040);    // Bright variant
 
   // ===== TEXT COLORS =====
   static const Color onSurface = Color(0xFFFFFFFF);        // Pure White text
-  static const Color onSurfaceVariant = Color(0xFFCCCCCC); // Light Gray text - secondary
+  static const Color onSurfaceVariant = Color(0xFFD0D0D0); // Light Gray text
 
   // ===== OUTLINE / BORDERS =====
-  static const Color outline = Color(0xFF555555);          // Mid-gray borders
-  static const Color outlineVariant = Color(0xFF333333);   // Dark gray borders
+  static const Color outline = Color(0xFF4A4A4A);          // Mid-gray borders
+  static const Color outlineVariant = Color(0xFF2F2F2F);   // Dark gray borders
 
   // ===== SPECIALTY COLORS =====
-  // Coin/Rewards (keeping gold for coins)
   static const Color coinGold = Color(0xFFFFD700);
   static const Color onCoinGold = Color(0xFF000000);
 
-  // Status Colors
-  static const Color error = Color(0xFFF44336);
-  static const Color success = Color(0xFF4CAF50);
-  static const Color warning = Color(0xFFFF9800);
+  // Status Colors - Enhanced
+  static const Color error = Color(0xFFFF6B6B);       // Bright Red
+  static const Color success = Color(0xFF00D084);     // Vibrant Green
+  static const Color warning = Color(0xFFFF9800);     // Orange
 
-  // ===== SCAN REPORT EXCLUSIVE COLORS (Black, Gold, White) =====
+  // ===== SCORE-BASED COLORS =====
+  static const Color scoreExcellent = Color(0xFF00D084);  // Vibrant Green
+  static const Color scoreGreat = Color(0xFF2196F3);      // Bright Blue
+  static const Color scoreGood = Color(0xFFD4AF37);       // Gold
+  static const Color scoreFair = Color(0xFFFF9800);       // Orange
+  static const Color scoreLow = Color(0xFFFF6B6B);        // Red
+
+  // ===== SCAN REPORT EXCLUSIVE COLORS =====
   static const Color scanReportBlack = Color(0xFF000000);      // Pure black
   static const Color scanReportGold = Color(0xFFD4AF37);        // Premium gold
   static const Color scanReportWhite = Color(0xFFFFFFFF);       // Pure white
   static const Color scanReportDarkGray = Color(0xFF1A1A1A);    // Almost black
   static const Color scanReportLightGray = Color(0xFFE8E8E8);   // Light gray
+
 
   // ===== GRADIENTS =====
   // Gold to Green gradient

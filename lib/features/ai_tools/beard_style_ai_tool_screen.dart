@@ -46,7 +46,7 @@ class _BeardStyleAIToolScreenState extends State<BeardStyleAIToolScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(
-        title: 'Beard Style AI',
+        title: 'Beard Style',
         showBackButton: true,
       ),
       body: ListView(

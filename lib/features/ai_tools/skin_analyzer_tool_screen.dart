@@ -15,7 +15,7 @@ class _SkinAnalyzerToolScreenState extends State<SkinAnalyzerToolScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(
-        title: 'Skin Analyzer',
+        title: 'Skin AI',
         showBackButton: true,
       ),
       body: ListView(

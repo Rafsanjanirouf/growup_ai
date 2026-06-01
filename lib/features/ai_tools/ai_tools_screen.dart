@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/app_header_fixed.dart';
+import 'hair_style_ai_tool_screen.dart';
+import 'ai_try_on_tool_screen.dart';
+import 'face_shape_analysis_tool_screen.dart';
+import 'best_color_analysis_tool_screen.dart';
+import 'beard_style_ai_tool_screen.dart';
+import 'celebrity_face_match_tool_screen.dart';
+import 'skin_analyzer_tool_screen.dart';
+import 'outfit_style_ai_tool_screen.dart';
 
 class AiToolsScreen extends StatelessWidget {
   const AiToolsScreen({super.key});
@@ -55,12 +63,14 @@ class AiToolsScreen extends StatelessWidget {
             mainAxisSpacing: 16,
             childAspectRatio: 0.75, // Tall cards
             children: [
-              _buildToolCard(context, 'Beard Style AI', 'Visualize perfect facial hair.', Icons.face, isFree: true, freeCount: 'Free 2/day'),
-              _buildToolCard(context, 'Hair Style AI', 'Try 50+ trending cuts.', Icons.content_cut, price: 25),
-              _buildToolCard(context, 'Celebrity Face Match', 'Find your A-list lookalike.', Icons.stars, price: 30),
-              _buildToolCard(context, 'Skin Analyzer', 'Deep scan for texture metrics.', Icons.biotech, price: 25),
-              _buildToolCard(context, 'Outfit Style AI', 'AI-curated wardrobe matching.', Icons.checkroom, price: 20),
-              _buildToolCard(context, 'Face Score History', 'Track 30 day glow-up progress.', Icons.history, isFree: true),
+              _buildToolCard(context, 'Hairstyle AI', 'Try 50+ trending cuts.', Icons.content_cut, price: 25, screen: const HairStyleAIToolScreen()),
+              _buildToolCard(context, 'AI Try On', 'Virtual generate outfit.', Icons.checkroom, price: 30, screen: const AiTryOnToolScreen()),
+              _buildToolCard(context, 'Face Shape', 'Analyze facial geometry.', Icons.face, isFree: true, screen: const FaceShapeAnalysisToolScreen()),
+              _buildToolCard(context, 'Dress Color', 'Best palette for you.', Icons.palette, price: 20, screen: const BestColorAnalysisToolScreen()),
+              _buildToolCard(context, 'Beard AI', 'Visualize perfect facial hair.', Icons.face_retouching_natural, isFree: true, freeCount: 'Free 2/day', screen: const BeardStyleAIToolScreen()),
+              _buildToolCard(context, 'Celeb Match', 'Find your A-list lookalike.', Icons.stars, price: 35, screen: const CelebrityFaceMatchToolScreen()),
+              _buildToolCard(context, 'Skin Analyzer', 'Deep scan metrics.', Icons.biotech, price: 40, screen: const SkinAnalyzerToolScreen()),
+              _buildToolCard(context, 'Outfit AI', 'AI-curated wardrobe.', Icons.checkroom, price: 20, screen: const OutfitStyleAIToolScreen()),
             ],
           ),
 
@@ -98,9 +108,11 @@ class AiToolsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildToolCard(BuildContext context, String title, String subtitle, IconData icon, {bool isFree = false, String freeCount = 'Free', int? price}) {
-    return Container(
-      padding: const EdgeInsets.all(16),
+  Widget _buildToolCard(BuildContext context, String title, String subtitle, IconData icon, {bool isFree = false, String freeCount = 'Free', int? price, required Widget screen}) {
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => screen)),
+      child: Container(
+        padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: AppColors.surfaceHigh, borderRadius: BorderRadius.circular(20)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,6 +157,7 @@ class AiToolsScreen extends StatelessWidget {
           )
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

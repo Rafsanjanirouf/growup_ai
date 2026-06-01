@@ -1,630 +1,570 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/rendering.dart';
+import 'dart:ui' as ui;
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../core/utils/face_analyzer_engine.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
-import '../home/main_navigation_screen.dart';
+import 'scan_details_page.dart';
 
-class ScanReportPage extends ConsumerWidget {
-  final int faceScore;
-  
-  const ScanReportPage({super.key, required this.faceScore});
+class ScanReportPage extends StatefulWidget {
+  final FaceAnalysisResult result;
+  final String imagePath;
+  final bool isHistory;
+
+  const ScanReportPage({
+    super.key,
+    required this.result,
+    required this.imagePath,
+    this.isHistory = false,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  State<ScanReportPage> createState() => _ScanReportPageState();
+}
+
+class _ScanReportPageState extends State<ScanReportPage> {
+  bool _isRatingView = true;
+  final GlobalKey _shareKey = GlobalKey();
+  bool _isSharing = false;
+
+  Future<void> _captureAndShareReport() async {
+    setState(() => _isSharing = true);
+    
+    // Small delay to allow UI to update (removing buttons)
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    try {
+      RenderRepaintBoundary? boundary = _shareKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return;
+
+      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+      final tempDir = await getTemporaryDirectory();
+      final file = await File('${tempDir.path}/growup_report_${DateTime.now().millisecondsSinceEpoch}.png').create();
+      await file.writeAsBytes(pngBytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'My GrowUp AI Face Analysis Results! 🎯 #Looksmaxxing #FaceRating',
+      );
+    } catch (e) {
+      debugPrint('Error sharing report: $e');
+    } finally {
+      if (mounted) setState(() => _isSharing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final overallScore = widget.result.attractivenessScore.toInt();
+    
     return Scaffold(
-      backgroundColor: AppColors.scanReportBlack,
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
           children: [
-            // Status Bar Space
-            SizedBox(height: MediaQuery.of(context).padding.top + 16),
-            
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Get Detailed',
-                    style: AppTypography.displayLarge.copyWith(
-                      color: AppColors.scanReportWhite,
-                      fontWeight: FontWeight.w300,
-                    ),
-                  ),
-                  Text(
-                    'Face Rating',
-                    style: AppTypography.displayLarge.copyWith(
-                      color: AppColors.scanReportGold,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 40),
-            
-            // Main Card
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.scanReportDarkGray,
-                  borderRadius: BorderRadius.circular(32),
-                  border: Border.all(
-                    color: AppColors.scanReportGold.withValues(alpha: 0.3),
-                    width: 2,
-                  ),
-                ),
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  children: [
-                    // Profile Image Placeholder
-                    Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.scanReportGold,
-                          width: 3,
-                        ),
-                        image: const DecorationImage(
-                          image: NetworkImage(
-                            'https://i.pravatar.cc/150?img=33',
-                          ),
-                          fit: BoxFit.cover,
+             // Scrollable Content
+             SingleChildScrollView(
+               physics: const BouncingScrollPhysics(),
+               padding: const EdgeInsets.only(bottom: 120),
+               child: Column(
+                 children: [
+                    // 1. Header (Part of shared image)
+                    RepaintBoundary(
+                      key: _shareKey,
+                      child: Container(
+                        color: Colors.black, // Ensure background is solid for share
+                        child: Column(
+                          children: [
+                            _buildHeader(context),
+                            
+                            const SizedBox(height: 16),
+                            
+                            // 3. Single Hero Image
+                            _buildMotivationalHero(),
+                            
+                            const SizedBox(height: 24),
+                            
+                            // 4. Metrics Grid
+                            _buildMetricsGrid(),
+
+                            if (_isSharing) ...[
+                              const SizedBox(height: 24),
+                              Center(
+                                child: Text(
+                                  "GROWUP AI",
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: Colors.white24,
+                                    letterSpacing: 4,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                            ],
+                          ],
                         ),
                       ),
                     ),
                     
-                    const SizedBox(height: 40),
-                    
-                    // Overall Score Row
-                    _ScoreRow(
-                      label: 'Overall',
-                      score: faceScore.toString(),
-                      color: AppColors.scanReportGold,
+                    if (!_isSharing) ...[
+                      const SizedBox(height: 24),
+                      // 2. Segmented Control (Hidden during share)
+                      _buildSegmentedControl(),
+                    ],
+                 ],
+               ),
+             ),
+             
+             // 5. Sticky Bottom Action Bar
+             _buildBottomActionBar(overallScore),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    // Show a historical date if it's a history item, otherwise Today
+    final dateStr = widget.isHistory ? "Saved Report" : DateFormat('yyyy/MM/dd').format(DateTime.now());
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          // Left Spacer (to balance the close button on the right)
+          const SizedBox(width: 48),
+          
+          // Center Title and Date
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Results',
+                  style: AppTypography.titleMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.camera_alt, color: Colors.white54, size: 14),
+                    const SizedBox(width: 6),
+                    Text(
+                      dateStr,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: Colors.white54,
+                      ),
                     ),
-                    const SizedBox(height: 20),
-                    
-                    // Potential Score Row
-                    _ScoreRow(
-                      label: 'Potential',
-                      score: '${faceScore + 10}',
-                      color: AppColors.scanReportGold,
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          // Close button on right (Hidden during share)
+          SizedBox(
+            width: 48,
+            child: _isSharing 
+              ? const SizedBox.shrink()
+              : IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
+                  onPressed: () => Navigator.pop(context),
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSegmentedControl() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E1E),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: _SegmentTab(
+                label: 'Rating',
+                isActive: _isRatingView,
+                onTap: () => setState(() => _isRatingView = true),
+              ),
+            ),
+            Expanded(
+              child: _SegmentTab(
+                label: 'Full analysis',
+                isActive: !_isRatingView,
+                onTap: () {
+                   // Navigate to Full Analysis Screen immediately as requested
+                   Navigator.push(
+                     context,
+                     MaterialPageRoute(builder: (context) => ScanDetailsPage(result: widget.result)),
+                   );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMotivationalHero() {
+    final currentScore = widget.result.attractivenessScore.toInt();
+    final potentialTarget = 95;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        height: 380,
+        decoration: BoxDecoration(
+          color: const Color(0xFF161616),
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Row(
+          children: [
+            // Left Side: Face Image with Side Fade
+            Expanded(
+              flex: 5,
+              child: Stack(
+                children: [
+                    SizedBox.expand(
+                      child: widget.imagePath.startsWith('http') 
+                        ? Image.network(widget.imagePath, fit: BoxFit.cover)
+                        : widget.imagePath.isEmpty
+                          ? const Center(child: Icon(Icons.face, size: 80, color: Colors.white10))
+                          : Image.file(File(widget.imagePath), fit: BoxFit.cover),
                     ),
-                    
-                    const SizedBox(height: 32),
-                    Divider(
-                      color: AppColors.scanReportGold.withValues(alpha: 0.2),
-                      height: 1,
+                   // Dual Fade Gradient (Bottom and Right)
+                   Container(
+                     decoration: BoxDecoration(
+                       gradient: LinearGradient(
+                         begin: Alignment.centerLeft,
+                         end: Alignment.centerRight,
+                         colors: [
+                           Colors.transparent,
+                           const Color(0xFF161616).withValues(alpha: 0.2),
+                           const Color(0xFF161616),
+                         ],
+                         stops: const [0.0, 0.7, 1.0],
+                       ),
+                     ),
+                   ),
+                   Container(
+                     decoration: BoxDecoration(
+                       gradient: LinearGradient(
+                         begin: Alignment.topCenter,
+                         end: Alignment.bottomCenter,
+                         colors: [
+                           Colors.transparent,
+                           const Color(0xFF161616).withValues(alpha: 0.5),
+                           const Color(0xFF161616),
+                         ],
+                         stops: const [0.6, 0.9, 1.0],
+                       ),
+                     ),
+                   ),
+                ],
+              ),
+            ),
+
+            // Right Side: Potential Dashboard
+            Expanded(
+              flex: 6,
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "GROWTH POTENTIAL",
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.primary,
+                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                    const SizedBox(height: 32),
-                    
-                    // Masculinity & Skin Quality
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ScoreColumn(
-                            label: 'Masculinity',
-                            score: '91',
-                            color: AppColors.scanReportGold,
-                          ),
-                        ),
-                        const SizedBox(width: 20),
-                        Expanded(
-                          child: _ScoreColumn(
-                            label: 'Skin Quality',
-                            score: '74',
-                            color: Colors.orange,
-                          ),
-                        ),
-                      ],
-                    ),
-                    
                     const SizedBox(height: 24),
                     
-                    // Jawline & Cheekbones
+                    // Current -> Potential Logic
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Expanded(
-                          child: _ScoreColumn(
-                            label: 'Jawline',
-                            score: '98',
-                            color: AppColors.scanReportGold,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text("CURRENT", style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.bold)),
+                            Text("$currentScore", style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900)),
+                          ],
                         ),
-                        const SizedBox(width: 20),
-                        Expanded(
-                          child: _ScoreColumn(
-                            label: 'Cheekbones',
-                            score: '90',
-                            color: AppColors.scanReportGold,
-                          ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          child: Icon(Icons.arrow_forward_rounded, color: Colors.white24, size: 24),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text("TARGET", style: TextStyle(color: AppColors.secondary, fontSize: 10, fontWeight: FontWeight.bold)),
+                            TweenAnimationBuilder<double>(
+                              tween: Tween(begin: currentScore.toDouble(), end: potentialTarget.toDouble()),
+                              duration: const Duration(seconds: 2),
+                              builder: (context, value, child) {
+                                return Text("${value.toInt()}", style: const TextStyle(color: AppColors.secondary, fontSize: 42, fontWeight: FontWeight.w900));
+                              },
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 60),
-            
-            // Action Buttons
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: Column(
-                children: [
-                  // View PSL Scores Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: () => _showPslScores(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.scanReportGold,
-                        foregroundColor: AppColors.scanReportBlack,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        'View PSL Scores',
-                        style: AppTypography.labelLarge.copyWith(
-                          color: AppColors.scanReportBlack,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Back to Home Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: OutlinedButton(
-                      onPressed: () {
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (context) => const MainNavigationScreen(),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Progress to Potential
+                    Container(
+                      height: 10,
+                      width: double.infinity,
+                      decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(5)),
+                      alignment: Alignment.centerLeft,
+                      child: FractionallySizedBox(
+                        widthFactor: (potentialTarget / 100).clamp(0.05, 1.0),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(colors: [Color(0xFF1E5AFF), Color(0xFF00FF0A)]),
+                            borderRadius: BorderRadius.circular(5),
                           ),
-                        );
-                      },
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                          color: AppColors.scanReportGold,
-                          width: 2,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: Text(
-                        'Back to Home',
-                        style: AppTypography.labelLarge.copyWith(
-                          color: AppColors.scanReportGold,
-                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  void _showPslScores(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const PslScoresModal(),
-    );
-  }
-}
-
-// Score Row Widget (for Overall/Potential)
-class _ScoreRow extends StatelessWidget {
-  final String label;
-  final String score;
-  final Color color;
-  
-  const _ScoreRow({
-    required this.label,
-    required this.score,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: AppTypography.bodyLarge.copyWith(
-            color: AppColors.scanReportLightGray,
-          ),
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              score,
-              style: AppTypography.displayMedium.copyWith(
-                color: color,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Container(
-              width: 60,
-              height: 4,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-// Score Column Widget (for metrics grid)
-class _ScoreColumn extends StatelessWidget {
-  final String label;
-  final String score;
-  final Color color;
-  
-  const _ScoreColumn({
-    required this.label,
-    required this.score,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.scanReportLightGray,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          score,
-          style: AppTypography.displaySmall.copyWith(
-            color: AppColors.scanReportWhite,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: 50,
-          height: 3,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// PSL Scores Modal
-class PslScoresModal extends StatelessWidget {
-  const PslScoresModal({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.scanReportBlack,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(32),
-          topRight: Radius.circular(32),
-        ),
-        border: Border(
-          top: BorderSide(
-            color: AppColors.scanReportGold.withValues(alpha: 0.3),
-            width: 2,
-          ),
-        ),
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.scanReportGold.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'PSL Scores',
-                    style: AppTypography.displayMedium.copyWith(
-                      color: AppColors.scanReportGold,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'Maxxing',
-                    style: AppTypography.displayMedium.copyWith(
-                      color: AppColors.scanReportWhite,
-                      fontWeight: FontWeight.w300,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 32),
-            
-            // Genetic Info
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.scanReportDarkGray,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppColors.scanReportGold.withValues(alpha: 0.2),
-                  ),
-                ),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _GeneticInfoRow('Genetic Ceiling', 'High'),
-                    const Divider(
-                      color: Color(0xFF333333),
-                      height: 16,
-                    ),
-                    _GeneticInfoRow('Primary Strength', 'Skin Quality'),
-                    const Divider(
-                      color: Color(0xFF333333),
-                      height: 16,
-                    ),
-                    _GeneticInfoRow('Primary Bottleneck', 'Eye Area'),
-                    const Divider(
-                      color: Color(0xFF333333),
-                      height: 16,
-                    ),
-                    _GeneticInfoRow('Looksmax Priority', 'Structure-Limited'),
+                    
+                    const Spacer(),
+                    
+                    // The Roadmap Markers (+2, +5, +4)
+                    _buildPathItem("+2", "Skin Texture"),
+                    const SizedBox(height: 12),
+                    _buildPathItem("+5", "Jawline Definition"),
+                    const SizedBox(height: 12),
+                    _buildPathItem("+4", "Eye Symmetry"),
+                    
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),
             ),
-            
-            const SizedBox(height: 24),
-            
-            // PSL Scores Grid
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _PslScoreCard(
-                    label: 'PSL Score',
-                    value: '6.0',
-                    subtitle: 'Top 15%',
-                    color: AppColors.secondary,
-                  ),
-                  _PslScoreCard(
-                    label: 'Cheekbones',
-                    value: '6.0',
-                    subtitle: 'Top 15%',
-                    color: AppColors.secondary,
-                  ),
-                  _PslScoreCard(
-                    label: 'Eye Area',
-                    value: '5.0',
-                    subtitle: 'Top 25%',
-                    color: Colors.orange,
-                  ),
-                  _PslScoreCard(
-                    label: 'Skin Quality',
-                    value: '7.0',
-                    subtitle: 'Top 5%',
-                    color: AppColors.secondary,
-                  ),
-                  _PslScoreCard(
-                    label: 'Hair Quality',
-                    value: '7.0',
-                    subtitle: 'Top 5%',
-                    color: AppColors.secondary,
-                  ),
-                  _PslScoreCard(
-                    label: 'Symmetry',
-                    value: '6.0',
-                    subtitle: 'Top 15%',
-                    color: AppColors.secondary,
-                  ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 32),
-            
-            // Close Button
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.scanReportGold,
-                    foregroundColor: AppColors.scanReportBlack,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text(
-                    'Done',
-                    style: AppTypography.labelLarge.copyWith(
-                      color: AppColors.scanReportBlack,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
     );
   }
-}
 
-// Genetic Info Row
-class _GeneticInfoRow extends StatelessWidget {
-  final String label;
-  final String value;
-  
-  const _GeneticInfoRow(this.label, this.value);
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildPathItem(String gain, String label) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.scanReportLightGray,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+          ),
+          child: Text(
+            gain,
+            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12),
           ),
         ),
-        Text(
-          value,
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.scanReportWhite,
-            fontWeight: FontWeight.bold,
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
           ),
         ),
       ],
     );
   }
-}
 
-// PSL Score Card
-class _PslScoreCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final String subtitle;
-  final Color color;
-  
-  const _PslScoreCard({
-    required this.label,
-    required this.value,
-    required this.subtitle,
-    required this.color,
-  });
+  Widget _buildMetricsGrid() {
+    final res = widget.result;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: 2,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+        childAspectRatio: 1.1,
+        children: [
+          _buildDarkCard('Overall', res.attractivenessScore.toInt()),
+          _buildDarkCard('Masculinity', res.masculinityScore.toInt()),
+          _buildDarkCard('Jawline', res.overallSymmetry.toInt()),
+          _buildDarkCard('Cheekbones', res.cheekboneScore.toInt()),
+          _buildDarkCard('Skin Quality', res.skinSmooth.toInt()),
+          _buildDarkCard('Attraction', res.modelPotential.toInt()), 
+        ],
+      ),
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildDarkCard(String label, int score) {
+    Color barColor;
+    if (score >= 80) {
+      barColor = const Color(0xFF00FF0A);
+    } else if (score >= 60) {
+      barColor = const Color(0xFFFFCC00);
+    } else {
+      barColor = const Color(0xFFFF3B30);
+    }
+
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.scanReportDarkGray,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: color.withValues(alpha: 0.2),
-        ),
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(24),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
-            style: AppTypography.bodySmall.copyWith(
-              color: AppColors.scanReportLightGray,
-            ),
-            textAlign: TextAlign.center,
+            style: AppTypography.bodySmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 12),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 70,
-                height: 70,
-                child: CircularProgressIndicator(
-                  value: double.parse(value) / 10,
-                  backgroundColor: AppColors.scanReportDarkGray,
-                  valueColor: AlwaysStoppedAnimation(color),
-                  strokeWidth: 6,
+          Text(
+            '$score',
+            style: AppTypography.displaySmall.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 36,
+            ),
+          ),
+          Container(
+            height: 10, // Enhanced thickness as requested
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(5),
+            ),
+            alignment: Alignment.centerLeft,
+            child: FractionallySizedBox(
+              widthFactor: (score / 100).clamp(0.05, 1.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: barColor,
+                  borderRadius: BorderRadius.circular(5),
                 ),
               ),
-              Column(
-                children: [
-                  Text(
-                    value,
-                    style: AppTypography.displaySmall.copyWith(
-                      color: AppColors.scanReportWhite,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'High',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            subtitle,
-            style: AppTypography.bodySmall.copyWith(
-              color: AppColors.scanReportLightGray,
             ),
-            textAlign: TextAlign.center,
-          ),
+          )
         ],
+      ),
+    );
+  }
+
+  Widget _buildBottomActionBar(int score) {
+    return Positioned(
+       bottom: 24,
+       left: 20,
+       right: 20,
+       child: Row(
+         children: [
+           // Social Icons row
+           _buildSocialIcon(Icons.message, const Color(0xFF25D366), onTap: _captureAndShareReport), // WhatsApp
+           const SizedBox(width: 8),
+           _buildSocialIcon(Icons.camera_alt, const Color(0xFFE1306C), onTap: _captureAndShareReport), // Instagram
+           const SizedBox(width: 8),
+           _buildSocialIcon(Icons.share_rounded, Colors.white12, onTap: _captureAndShareReport),
+           
+           const SizedBox(width: 12),
+           
+           // Main Share Button
+           Expanded(
+             child: SizedBox(
+               height: 56,
+               child: ElevatedButton(
+                 onPressed: _captureAndShareReport,
+                 style: ElevatedButton.styleFrom(
+                   backgroundColor: const Color(0xFF1E5AFF),
+                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                   elevation: 0,
+                 ),
+                 child: Row(
+                   mainAxisAlignment: MainAxisAlignment.center,
+                   children: [
+                     Text(
+                       'Share',
+                       style: AppTypography.ctaButton.copyWith(color: Colors.white, fontSize: 18),
+                     ),
+                     const SizedBox(width: 8),
+                     const Icon(Icons.reply_rounded, color: Colors.white, size: 20),
+                   ],
+                 ),
+               ),
+             ),
+           ),
+         ],
+       ),
+    );
+  }
+
+  Widget _buildSocialIcon(IconData icon, Color color, {required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E1E),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Icon(icon, color: color == Colors.white12 ? Colors.white70 : color, size: 24),
+      ),
+    );
+  }
+}
+
+class _SegmentTab extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _SegmentTab({required this.label, required this.isActive, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: AppTypography.labelLarge.copyWith(
+            color: isActive ? Colors.black : Colors.white70,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }

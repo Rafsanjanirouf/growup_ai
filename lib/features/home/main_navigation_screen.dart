@@ -2,13 +2,13 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/widgets/app_header_fixed.dart';
 import '../../core/providers/navigation_provider.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../dashboard/daily_tasks_screen.dart';
 import '../assistant/assistant_screen.dart';
 import '../programs/programs_screen.dart';
 import '../profile/profile_screen.dart';
+import '../../core/widgets/dashboard_stats_hud.dart';
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
@@ -21,7 +21,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   final List<Widget> _screens = [
     const DashboardScreen(),
     const DailyTasksScreen(),
-    const AssistantScreen(),
     const ProgramsScreen(),
     const ProfileScreen(),
   ];
@@ -32,11 +31,20 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.surfaceHighest,
-      appBar: AppHeader(),
       extendBody: true,
-      body: IndexedStack(
-        index: currentIndex,
-        children: _screens,
+      body: Column(
+        children: [
+          // Persistent Fixed Top Bar - Hidden on Profile
+          if (currentIndex != 3) const DashboardStatsHud(),
+          
+          // Navigation Tab Content
+          Expanded(
+            child: IndexedStack(
+              index: currentIndex,
+              children: _screens,
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
@@ -87,21 +95,27 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                     _NavBarItem(
                       icon: Icons.auto_awesome_rounded,
                       label: 'AI HUB',
-                      isSelected: currentIndex == 2,
+                      isSelected: false, // AI Hub is always independent now
                       isAi: true,
-                      onTap: () => ref.read(navigationProvider.notifier).setTab(2),
+                      onTap: () {
+                        // Navigate to AI as a standalone page (hides bottom navbar)
+                        Navigator.push(
+                          context, 
+                          MaterialPageRoute(builder: (_) => const AssistantScreen())
+                        );
+                      },
                     ),
                     _NavBarItem(
                       icon: Icons.explore_outlined,
                       label: 'PLAN',
-                      isSelected: currentIndex == 3,
-                      onTap: () => ref.read(navigationProvider.notifier).setTab(3),
+                      isSelected: currentIndex == 2,
+                      onTap: () => ref.read(navigationProvider.notifier).setTab(2),
                     ),
                     _NavBarItem(
                       icon: Icons.person_outline_rounded,
                       label: 'ME',
-                      isSelected: currentIndex == 4,
-                      onTap: () => ref.read(navigationProvider.notifier).setTab(4),
+                      isSelected: currentIndex == 3,
+                      onTap: () => ref.read(navigationProvider.notifier).setTab(3),
                     ),
                   ],
                 ),

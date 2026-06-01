@@ -1,46 +1,66 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'user_stats_provider.dart';
+
+enum TaskTimeTag { morning, noon, night }
+enum TaskType { simple, timer }
+enum TaskCategory { habit, regular }
 
 class Task {
   final String id;
   final String title;
+  final String description;
   final bool isCompleted;
   final int xpReward;
+  final TaskTimeTag timeTag;
+  final TaskType type;
+  final TaskCategory category;
+  final int durationSeconds;
 
   Task({
     required this.id,
     required this.title,
+    this.description = 'Complete this task to improve your facial aesthetics and grow your tree.',
     this.isCompleted = false,
     this.xpReward = 50,
+    this.timeTag = TaskTimeTag.morning,
+    this.type = TaskType.simple,
+    this.category = TaskCategory.habit,
+    this.durationSeconds = 0,
   });
 
   Task copyWith({bool? isCompleted}) {
     return Task(
       id: id,
       title: title,
+      description: description,
       isCompleted: isCompleted ?? this.isCompleted,
       xpReward: xpReward,
+      timeTag: timeTag,
+      type: type,
+      category: category,
+      durationSeconds: durationSeconds,
     );
   }
 }
 
 class TaskTrackerState {
-  final int currentDay; // 1-30
-  final Map<int, List<Task>> days; // Day -> List of Tasks
+  final DateTime selectedDate;
+  final Map<DateTime, List<Task>> dailyTasks;
   final bool isLoading;
+  final TaskCategory selectedCategory;
 
   TaskTrackerState({
-    required this.currentDay,
-    required this.days,
+    required this.selectedDate,
+    required this.dailyTasks,
     this.isLoading = false,
+    this.selectedCategory = TaskCategory.habit,
   });
 
   double get overallProgress {
     int totalTasks = 0;
     int completedTasks = 0;
     
-    days.forEach((day, tasks) {
+    dailyTasks.forEach((date, tasks) {
       totalTasks += tasks.length;
       completedTasks += tasks.where((t) => t.isCompleted).length;
     });
@@ -50,7 +70,6 @@ class TaskTrackerState {
   }
 
   int get treeFrame {
-    // Mapping total progress to 82 frames (1-82)
     int frame = (overallProgress * 81).round() + 1;
     if (frame > 82) frame = 82;
     if (frame < 1) frame = 1;
@@ -58,88 +77,115 @@ class TaskTrackerState {
   }
 
   TaskTrackerState copyWith({
-    int? currentDay,
-    Map<int, List<Task>>? days,
+    DateTime? selectedDate,
+    Map<DateTime, List<Task>>? dailyTasks,
     bool? isLoading,
+    TaskCategory? selectedCategory,
   }) {
     return TaskTrackerState(
-      currentDay: currentDay ?? this.currentDay,
-      days: days ?? this.days,
+      selectedDate: selectedDate ?? this.selectedDate,
+      dailyTasks: dailyTasks ?? this.dailyTasks,
       isLoading: isLoading ?? this.isLoading,
+      selectedCategory: selectedCategory ?? this.selectedCategory,
     );
   }
 }
 
 class TaskTrackerNotifier extends StateNotifier<TaskTrackerState> {
   final Ref ref;
-  late SharedPreferences _prefs;
-  static const _currentDayKey = 'program_current_day';
 
-  TaskTrackerNotifier(this.ref) : super(TaskTrackerState(currentDay: 1, days: {}, isLoading: true)) {
+  TaskTrackerNotifier(this.ref) 
+    : super(TaskTrackerState(
+        selectedDate: DateTime.now(), 
+        dailyTasks: {}, 
+        isLoading: true
+      )) {
     _init();
   }
 
   Future<void> _init() async {
-    _prefs = ref.watch(sharedPreferencesProvider);
     _loadState();
   }
 
   void _loadState() {
-    // Initialize standard 30-day missions
-    final Map<int, List<Task>> initialDays = {};
-    for (int i = 1; i <= 30; i++) {
-      initialDays[i] = [
-        Task(id: 'task_${i}_1', title: 'Face Yoga (10 min)'),
-        Task(id: 'task_${i}_2', title: 'Hydration Challenge'),
-        Task(id: 'task_${i}_3', title: 'Skincare Routine'),
-        Task(id: 'task_${i}_4', title: 'Meditation (5 min)'),
-        Task(id: 'task_${i}_5', title: 'Daily Workout'),
+    final Map<DateTime, List<Task>> tasks = {};
+    final today = DateTime.now();
+    
+    // Generate tasks for 7 days (3 past, today, 3 future)
+    for (int i = -3; i <= 3; i++) {
+      final date = DateTime(today.year, today.month, today.day + i);
+      tasks[date] = [
+        Task(
+          id: 'h1_$i', 
+          title: 'Morning Mewing', 
+          timeTag: TaskTimeTag.morning, 
+          type: TaskType.timer, 
+          durationSeconds: 300,
+          category: TaskCategory.habit,
+        ),
+        Task(
+          id: 'r1_$i', 
+          title: 'Face Massage', 
+          timeTag: TaskTimeTag.noon, 
+          type: TaskType.simple,
+          category: TaskCategory.regular,
+        ),
+        Task(
+          id: 'h2_$i', 
+          title: 'Skincare Routine', 
+          timeTag: TaskTimeTag.night, 
+          type: TaskType.simple,
+          category: TaskCategory.habit,
+        ),
+        Task(
+          id: 'r2_$i', 
+          title: 'Jawline Workout', 
+          timeTag: TaskTimeTag.night, 
+          type: TaskType.timer, 
+          durationSeconds: 600,
+          category: TaskCategory.regular,
+        ),
       ];
     }
-
-    // Load from memory (Simulated persistence for now, could use JSON in prefs)
-    final savedDay = _prefs.getInt(_currentDayKey) ?? 1;
     
     state = TaskTrackerState(
-      currentDay: savedDay,
-      days: initialDays,
+      selectedDate: today,
+      dailyTasks: tasks,
       isLoading: false,
     );
   }
 
-  void toggleTask(int day, String taskId) {
-    if (state.days.containsKey(day)) {
-      final tasks = state.days[day]!;
+  void toggleTask(DateTime date, String taskId) {
+    // Only allow editing for the current day
+    final now = DateTime.now();
+    final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
+    
+    if (!isToday) return;
+
+    if (state.dailyTasks.containsKey(date)) {
+      final tasks = state.dailyTasks[date]!;
       final updatedTasks = tasks.map((t) {
         if (t.id == taskId) {
           final newState = !t.isCompleted;
-          if (newState) {
-            // Reward XP on completion
-            ref.read(userStatsProvider.notifier).addXP(t.xpReward);
-          }
+          if (newState) ref.read(userStatsProvider.notifier).addXP(t.xpReward);
           return t.copyWith(isCompleted: newState);
         }
         return t;
       }).toList();
 
-      final newDays = Map<int, List<Task>>.from(state.days);
-      newDays[day] = updatedTasks;
+      final newDailyTasks = Map<DateTime, List<Task>>.from(state.dailyTasks);
+      newDailyTasks[date] = updatedTasks;
       
-      state = state.copyWith(days: newDays);
-      _checkDayCompletion(day);
+      state = state.copyWith(dailyTasks: newDailyTasks);
     }
   }
 
-  void _checkDayCompletion(int day) {
-    // Logic to increment day if all tasks completed, or just track progress
-    // For now, let the user manually switch days or track overall
+  void setCategory(TaskCategory category) {
+    state = state.copyWith(selectedCategory: category);
   }
 
-  void setCurrentDay(int day) {
-    if (day >= 1 && day <= 30) {
-      state = state.copyWith(currentDay: day);
-      _prefs.setInt(_currentDayKey, day);
-    }
+  void setSelectedDate(DateTime date) {
+    state = state.copyWith(selectedDate: date);
   }
 }
 

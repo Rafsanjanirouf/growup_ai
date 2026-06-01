@@ -14,6 +14,7 @@ class BottomActionButton extends StatefulWidget {
   final double bottomOffset;
   final bool showAnimation;
   final bool isPulsing;
+  final bool usePositioned;
   final AnimationController? scaleController;
 
   const BottomActionButton({
@@ -26,6 +27,7 @@ class BottomActionButton extends StatefulWidget {
     this.bottomOffset = 110, // Sit above the floating navigation bar
     this.showAnimation = true,
     this.isPulsing = false,
+    this.usePositioned = true,
     this.scaleController,
   });
 
@@ -120,57 +122,62 @@ class _BottomActionButtonState extends State<BottomActionButton>
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      bottom: widget.bottomOffset,
-      left: 24,
-      right: 24,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: !widget.isLoading
-            ? GestureDetector(
-                onTapDown: _onTapDown,
-                onTapUp: _onTapUp,
-                onTapCancel: _onTapCancel,
-                behavior: HitTestBehavior.opaque,
-                child: ScaleTransition(
-                  scale: _pulseAnimation,
-                  child: SlideTransition(
-                    position: _tabAnimation,
-                    child: _buildButtonContent(),
-                  ),
+    final buttonWidget = ScaleTransition(
+      scale: _scaleAnimation,
+      child: !widget.isLoading
+          ? GestureDetector(
+              onTapDown: _onTapDown,
+              onTapUp: _onTapUp,
+              onTapCancel: _onTapCancel,
+              behavior: HitTestBehavior.opaque,
+              child: ScaleTransition(
+                scale: _pulseAnimation,
+                child: SlideTransition(
+                  position: _tabAnimation,
+                  child: _buildButtonContent(),
                 ),
-              )
-            : _buildLoadingContent(),
-      ),
+              ),
+            )
+          : _buildLoadingContent(),
     );
+
+    if (widget.usePositioned) {
+      return Positioned(
+        bottom: widget.bottomOffset,
+        left: 24,
+        right: 24,
+        child: buttonWidget,
+      );
+    }
+
+    return buttonWidget;
   }
 
   Widget _buildButtonContent() {
     return Container(
       padding: const EdgeInsets.symmetric(
-        vertical: 16,
+        vertical: 18,
         horizontal: 48,
       ),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [
-            AppColors.primary,
-            AppColors.primary.withValues(alpha: 0.8),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
+        gradient: AppColors.kineticGradient,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.5),
+            color: AppColors.primary.withValues(alpha: 0.4),
             blurRadius: 25,
-            spreadRadius: 3,
+            spreadRadius: 2,
             offset: const Offset(0, 10),
+          ),
+          BoxShadow(
+            color: AppColors.secondary.withValues(alpha: 0.2),
+            blurRadius: 40,
+            spreadRadius: -5,
+            offset: const Offset(0, 15),
           ),
         ],
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.3),
+          color: Colors.white.withValues(alpha: 0.4),
           width: 1.5,
         ),
       ),
@@ -178,11 +185,11 @@ class _BottomActionButtonState extends State<BottomActionButton>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            widget.label,
+            widget.label.toUpperCase(),
             style: AppTypography.labelLarge.copyWith(
               color: Colors.white,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.2,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2.0,
             ),
           ),
           if (widget.icon != null) ...[
@@ -190,7 +197,7 @@ class _BottomActionButtonState extends State<BottomActionButton>
             Icon(
               widget.icon,
               color: Colors.white,
-              size: 20,
+              size: 22,
             ),
           ],
         ],
@@ -200,21 +207,25 @@ class _BottomActionButtonState extends State<BottomActionButton>
 
   Widget _buildLoadingContent() {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        CircularProgressIndicator(
-          strokeWidth: 3,
-          valueColor: const AlwaysStoppedAnimation(
-            Colors.white,
+        SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 3,
+            valueColor: AlwaysStoppedAnimation(
+              Colors.white.withValues(alpha: 0.8),
+            ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         Text(
-          widget.loadingText ?? 'Loading...',
+          widget.loadingText ?? 'PROCESSING...',
           style: AppTypography.labelSmall.copyWith(
-            color: AppColors.onSurfaceVariant.withValues(
-              alpha: 0.7,
-            ),
-            letterSpacing: 0.8,
+            color: Colors.white.withValues(alpha: 0.7),
+            letterSpacing: 1.2,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ],

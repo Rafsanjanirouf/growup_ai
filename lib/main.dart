@@ -12,6 +12,8 @@ import 'features/home/main_navigation_screen.dart';
 import 'features/onboarding/splash_screen.dart';
 import 'features/onboarding/trust_reviews_screen.dart';
 import 'features/monetization/coin_shop_screen.dart';
+import 'features/onboarding/discovery_hub_screen.dart';
+import 'features/face_scan/face_scan_intro_screen.dart';
 
 List<CameraDescription> cameras = [];
 
@@ -57,9 +59,11 @@ class GrowUpAIApp extends StatelessWidget {
       home: const SplashScreen(),
       routes: {
         '/onboarding': (context) => const OnboardingScreen(),
+        '/discovery': (context) => const DiscoveryHubScreen(),
         '/trust-reviews': (context) => const TrustReviewsScreen(),
         '/auth': (context) => const AuthScreen(),
         '/goals': (context) => const GoalSelectionScreen(),
+        '/face-scan-intro': (context) => const FaceScanIntroScreen(),
         '/face-scan': (context) => const FaceScanScreen(),
         '/main-navigation': (context) => const MainNavigationScreen(),
         '/coin-shop': (context) => const CoinShopScreen(),

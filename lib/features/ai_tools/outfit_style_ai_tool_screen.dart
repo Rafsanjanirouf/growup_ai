@@ -24,7 +24,7 @@ class _OutfitStyleAIToolScreenState extends State<OutfitStyleAIToolScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(
-        title: 'Outfit Style AI',
+        title: 'Outfit AI',
         showBackButton: true,
       ),
       body: ListView(

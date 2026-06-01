@@ -24,7 +24,7 @@ class _CelebrityFaceMatchToolScreenState extends State<CelebrityFaceMatchToolScr
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(
-        title: 'Celebrity Face Match',
+        title: 'Celebrity Match',
         showBackButton: true,
       ),
       body: ListView(

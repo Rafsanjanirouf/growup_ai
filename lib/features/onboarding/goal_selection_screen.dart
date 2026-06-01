@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/providers/voice_guide_provider.dart';
 import '../../shared/widgets/voice_guide_toggle.dart';
+import '../../shared/widgets/bottom_action_button.dart';
 
 class GoalSelectionScreen extends ConsumerStatefulWidget {
   const GoalSelectionScreen({super.key});
@@ -137,7 +138,7 @@ class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
       await Future.delayed(const Duration(seconds: 1));
       
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/face-scan');
+        Navigator.of(context).pushReplacementNamed('/face-scan-intro');
       }
     } catch (e) {
       debugPrint('Error saving goals: $e');
@@ -239,69 +240,21 @@ class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 120), // Bottom space for floating button
                     ],
                   ),
                 ),
               ),
-
-              // Bottom button section
-              SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed:
-                          selectedGoals.isEmpty || _isLoading ? null : _handleContinue,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        disabledBackgroundColor:
-                            AppColors.primary.withValues(alpha: 0.5),
-                      ),
-                      child: _isLoading
-                          ? Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    valueColor: AlwaysStoppedAnimation(
-                                      Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'Setting up your journey...',
-                                  style: AppTypography.labelLarge.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            )
-                          : Text(
-                              'Continue',
-                              style: AppTypography.labelLarge.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                    ),
-                  ),
-                ),
-              ),
             ],
+          ),
+          
+          // Global Premium Button
+          BottomActionButton(
+            label: _isLoading ? 'CALCULATING PATH...' : 'CONTINUE',
+            icon: Icons.arrow_forward_rounded,
+            isLoading: _isLoading,
+            isPulsing: selectedGoals.isNotEmpty && !_isLoading,
+            onTap: selectedGoals.isEmpty || _isLoading ? null : _handleContinue,
           ),
           const VoiceGuideToggle(),
         ],

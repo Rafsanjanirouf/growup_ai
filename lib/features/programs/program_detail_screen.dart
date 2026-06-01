@@ -1,200 +1,333 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
-import '../../shared/widgets/bottom_action_button.dart';
+import '../../core/providers/programs_provider.dart';
+import '../../core/providers/user_stats_provider.dart';
 import '../monetization/premium_paywall_screen.dart';
+import '../monetization/coin_shop_screen.dart';
+import 'program_task_screen.dart';
 
-class ProgramDetailScreen extends StatelessWidget {
-  const ProgramDetailScreen({super.key});
+class ProgramDetailScreen extends ConsumerWidget {
+  final Program program;
+  const ProgramDetailScreen({super.key, required this.program});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final programsState = ref.watch(programsProvider);
+    // Find the latest state for this specific program
+    final currentProgramState = programsState.programs.firstWhere((p) => p.id == program.id, orElse: () => program);
+    final userStats = ref.watch(userStatsProvider);
+
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.surfaceLowest,
       body: Stack(
         children: [
-          ListView(
-            padding: const EdgeInsets.only(bottom: 120),
+          CustomScrollView(
             physics: const BouncingScrollPhysics(),
-            children: [
-              // Hero Image
-              SizedBox(
-                height: 350,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.network('https://images.unsplash.com/photo-1618077360395-f3068be8e001?q=80&w=800&auto=format&fit=crop', fit: BoxFit.cover),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [AppColors.surface.withValues(alpha: 0.8), AppColors.surface.withValues(alpha: 0), AppColors.surface],
+            slivers: [
+              // ===== HERO HEADER =====
+              SliverAppBar(
+                expandedHeight: 300,
+                backgroundColor: AppColors.surfaceLowest,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (currentProgramState.thumbnailUrl != null)
+                        Image.network(currentProgramState.thumbnailUrl!, fit: BoxFit.cover),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              AppColors.surfaceLowest.withValues(alpha: 0.8),
+                              AppColors.surfaceLowest,
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    Positioned(
-                      bottom: 24, left: 24,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text('AESTHETIC EVOLUTION', style: TextStyle(color: AppColors.secondary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
-                          SizedBox(height: 4),
-                          Text('21-Day Elite\nTransformation', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, height: 1.1)),
-                        ],
-                      ),
-                    ),
-                     Positioned(
-                      top: 48, left: 16,
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: AppColors.primary),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ),
-                    Positioned(
-                      top: 48, right: 24,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(color: AppColors.surfaceHigh.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(16)),
-                        child: Row(
-                          children: const [
-                            Icon(Icons.stars, color: AppColors.tertiary, size: 16),
-                            SizedBox(width: 4),
-                            Text('PREMIUM', style: TextStyle(color: AppColors.surfaceLowest, fontSize: 10, fontWeight: FontWeight.bold)),
+                      Positioned(
+                        bottom: 20,
+                        left: 20,
+                        right: 20,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildTypeBadge(currentProgramState),
+                            const SizedBox(height: 12),
+                            Text(
+                              currentProgramState.title,
+                              style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, height: 1.1),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              currentProgramState.description,
+                              style: const TextStyle(color: Colors.white38, fontSize: 13),
+                            ),
                           ],
                         ),
                       ),
-                    )
-                  ],
+                    ],
+                  ),
                 ),
               ),
-              
-              Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Timeline Bento
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(color: AppColors.surfaceHigh, borderRadius: BorderRadius.circular(16)),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('GROWTH ROADMAP', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 10, fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 16),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: const LinearProgressIndicator(value: 0.33, backgroundColor: AppColors.surfaceLowest, color: AppColors.secondary, minHeight: 6),
-                                ),
-                                const SizedBox(height: 16),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    _buildStat('07', 'DAYS DONE'),
-                                    _buildStat('21', 'TOTAL'),
-                                    _buildStat('33%', 'PROGRESS', color: AppColors.primary),
-                                  ],
-                                )
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          flex: 1,
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                             decoration: BoxDecoration(color: AppColors.surfaceHighest, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.1))),
-                             child: Column(
-                               crossAxisAlignment: CrossAxisAlignment.start,
-                               children: [
-                                  const Text('TODAY', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 10, fontWeight: FontWeight.bold)),
-                                  const SizedBox(height: 12),
-                                  const Icon(Icons.architecture, color: AppColors.secondary),
-                                  const SizedBox(height: 8),
-                                  const Text('Mewing\nBasics', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, height: 1.2)),
-                               ],
-                             ),
-                          ),
-                        )
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    
-                    const Text('Curriculum', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
-                    
-                    _buildCurriculumItem('01', 'Face Yoga Fundamentals', 'Waking up the dormant muscles.', isCompleted: true),
-                    _buildCurriculumItem('02', 'Mewing: The Tongue Anchor', 'Mastering the correct resting position.', isActive: true),
-                    _buildCurriculumItem('03', 'Resistance Stretching', 'Applying dynamic tension.', isLocked: true),
-                    _buildCurriculumItem('04', 'Gua Sha Sculpting', 'Lymphatic drainage techniques.', isLocked: true),
-                    
-                    const SizedBox(height: 32),
-                  ],
+
+              // ===== STATS ROW =====
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  child: Row(
+                    children: [
+                      _buildHeaderStat(Icons.schedule, currentProgramState.duration, 'DURATION'),
+                      _buildHeaderStat(Icons.stairs, currentProgramState.difficulty.name.toUpperCase(), 'LEVEL'),
+                      _buildHeaderStat(Icons.checklist_rtl_rounded, '${currentProgramState.tasksCompletedToday}/${currentProgramState.totalTasksToday}', 'TASKS'),
+                    ],
+                  ),
                 ),
-              )
+              ),
+
+              // ===== ROADMAP TITLE =====
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: Text(
+                    'Transformation Roadmap'.toUpperCase(),
+                    style: const TextStyle(color: Colors.white24, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 2),
+                  ),
+                ),
+              ),
+
+              // ===== DAY LIST =====
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final day = index + 1;
+                    final isLocked = !currentProgramState.isUnlocked;
+                    final isCompleted = day < currentProgramState.currentDay && currentProgramState.isUnlocked;
+                    final isToday = day == currentProgramState.currentDay && currentProgramState.isUnlocked;
+
+                    return _buildDayCard(day, isLocked, isCompleted, isToday);
+                  },
+                  childCount: currentProgramState.totalDays,
+                ),
+              ),
+
+              const SliverPadding(padding: EdgeInsets.only(bottom: 150)),
             ],
           ),
-          
-          // Bottom Action Button
-          BottomActionButton(
-            label: 'Unlock Full Program',
-            icon: Icons.lock_open,
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const PremiumPaywallScreen()));
-            },
-            bottomOffset: 60,
+
+          // ===== SMART BOTTOM BUTTON =====
+          Positioned(
+            bottom: 20,
+            left: 20,
+            right: 20,
+            child: SafeArea(
+              top: false,
+              bottom: true,
+              child: _buildActionButton(context, ref, currentProgramState, userStats.coins),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStat(String val, String label, {Color color = AppColors.onSurface}) {
-    return Column(
-      children: [
-        Text(val, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
-        Text(label, style: const TextStyle(fontSize: 8, color: AppColors.onSurfaceVariant, fontWeight: FontWeight.bold)),
-      ],
+  Widget _buildTypeBadge(Program p) {
+    if (p.isPremium) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA500)]),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.diamond_rounded, color: Colors.black, size: 14),
+            SizedBox(width: 6),
+            Text('PREMIUM ACCESS', style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.w900)),
+          ],
+        ),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(10)),
+      child: const Text('COIN BASE PROGRAM', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w900)),
     );
   }
-  
-  Widget _buildCurriculumItem(String num, String title, String subtitle, {bool isCompleted = false, bool isActive = false, bool isLocked = false}) {
-    Color outlineColor = AppColors.outlineVariant.withValues(alpha: 0.3);
-    if(isActive) outlineColor = AppColors.secondary;
-    
+
+  Widget _buildHeaderStat(IconData icon, String value, String label) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(color: AppColors.surfaceLow, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withValues(alpha: 0.05))),
+        child: Column(
+          children: [
+            Icon(icon, color: AppColors.primary, size: 18),
+            const SizedBox(height: 8),
+            Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+            Text(label, style: const TextStyle(color: Colors.white24, fontSize: 8, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDayCard(int day, bool isLocked, bool isCompleted, bool isToday) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isLocked ? AppColors.surfaceLow.withValues(alpha: 0.5) : AppColors.surfaceHigh,
-        borderRadius: BorderRadius.circular(16),
-        border: Border(left: BorderSide(color: outlineColor, width: isActive ? 4 : 2)),
+        color: isLocked ? Colors.white.withValues(alpha: 0.02) : AppColors.surfaceLow,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isToday ? AppColors.primary.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.05)),
       ),
       child: Row(
         children: [
-          Text(num, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: isActive ? AppColors.secondary : AppColors.outlineVariant.withValues(alpha: 0.3))),
+          Container(
+            width: 45,
+            height: 45,
+            decoration: BoxDecoration(
+              color: isCompleted ? Colors.green.withValues(alpha: 0.1) : (isLocked ? Colors.white.withValues(alpha: 0.05) : AppColors.primary.withValues(alpha: 0.1)),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: isCompleted 
+              ? const Icon(Icons.check, color: Colors.green, size: 20)
+              : (isLocked ? const Icon(Icons.lock, color: Colors.white10, size: 18) : Text('$day', style: TextStyle(color: isToday ? AppColors.primary : Colors.white60, fontWeight: FontWeight.w900))),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
-               crossAxisAlignment: CrossAxisAlignment.start,
-               children: [
-                 Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isLocked ? AppColors.onSurfaceVariant : AppColors.onSurface)),
-                 Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
-               ],
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Day $day: Mission Name',
+                  style: TextStyle(color: isLocked ? Colors.white24 : Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                Text(
+                  isLocked ? 'Locked until program starts' : 'Specialized face-training activities.',
+                  style: const TextStyle(color: Colors.white24, fontSize: 12),
+                ),
+              ],
             ),
           ),
-          if (isCompleted)
-            const Icon(Icons.check_circle, color: AppColors.secondary)
-          else if (isActive)
-             const Icon(Icons.play_circle, color: AppColors.onSurface)
-          else if (isLocked)
-             const Icon(Icons.lock, color: AppColors.outlineVariant)
+          if (isToday)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
+              child: const Text('ACTIVE', style: TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.w900)),
+            ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(BuildContext context, WidgetRef ref, Program p, int userCoins) {
+    String label = '';
+    IconData icon = Icons.play_arrow;
+    Color color = AppColors.primary;
+    VoidCallback? action;
+
+    if (!p.isUnlocked) {
+      if (p.isPremium) {
+        label = 'UNLOCK WITH PREMIUM';
+        icon = Icons.diamond_rounded;
+        color = const Color(0xFFFFD700);
+        action = () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumPaywallScreen()));
+      } else {
+        label = 'UNLOCK FOR ${p.coinCost} COINS';
+        icon = Icons.monetization_on;
+        color = Colors.amber;
+        action = () => _handleCoinUnlock(context, ref, p, userCoins);
+      }
+    } else {
+      if (p.isCurrent) {
+        label = 'CONTINUE DAY ${p.currentDay}';
+        icon = Icons.bolt;
+        action = () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProgramTaskScreen(program: p)));
+      } else {
+        label = 'START PROGRAM';
+        icon = Icons.rocket_launch;
+        action = () {
+          ref.read(programsProvider.notifier).setAsCurrent(p.id);
+          Navigator.push(context, MaterialPageRoute(builder: (_) => ProgramTaskScreen(program: p)));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${p.title} is now your active program!')));
+        };
+      }
+    }
+
+    return GestureDetector(
+      onTap: action,
+      child: Container(
+        height: 65,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 5)),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.black, size: 24),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleCoinUnlock(BuildContext context, WidgetRef ref, Program p, int userCoins) async {
+    if (userCoins < p.coinCost) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Insufficient coins! Opening shop...')),
+      );
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const CoinShopScreen()),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: AlertDialog(
+          backgroundColor: AppColors.surfaceLow,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: const BorderSide(color: Colors.white10)),
+          title: const Text('Confirm Purchase', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+          content: Text('Do you want to use ${p.coinCost} coins to unlock permanent access to ${p.title}?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL', style: TextStyle(color: Colors.white24))),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              onPressed: () async {
+                Navigator.pop(context);
+                final success = await ref.read(programsProvider.notifier).unlockProgram(p.id);
+                if (success && context.mounted) {
+                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Program unlocked successfully!')));
+                }
+              },
+              child: const Text('UNLOCK', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
       ),
     );
   }
