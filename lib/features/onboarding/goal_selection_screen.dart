@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
-import '../../core/providers/voice_guide_provider.dart';
-import '../../shared/widgets/voice_guide_toggle.dart';
-import '../../shared/widgets/bottom_action_button.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/glass_container.dart';
+import '../../core/providers/user_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/services/firestore_service.dart';
+import '../../core/services/backup_preference_service.dart';
 
 class GoalSelectionScreen extends ConsumerStatefulWidget {
   const GoalSelectionScreen({super.key});
@@ -15,358 +16,278 @@ class GoalSelectionScreen extends ConsumerStatefulWidget {
 }
 
 class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Trigger AI Guide narration
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(voiceGuideProvider.notifier).speak(
-        "Start your journey by choosing your evolution goals. We'll tailor your daily missions based on these selections."
-      );
-    });
-  }
+  final List<String> _selectedGoals = [];
+  String _selectedSkinType = 'Oily';
+  String _selectedBudget = 'Basic';
 
-  final List<Goal> goals = [
-    Goal(
-      id: 'jawline',
-      emoji: '✨',
-      title: 'Sculpted Jawline',
-      description: 'Sharpen your jawline and improve facial definition',
-      color: AppColors.primary,
-    ),
-    Goal(
-      id: 'skin',
-      emoji: '🌟',
-      title: 'Clear Glowing Skin',
-      description: 'Achieve a radiant complexion with expert skincare',
-      color: AppColors.secondary,
-    ),
-    Goal(
-      id: 'symmetry',
-      emoji: '⚖️',
-      title: 'Facial Symmetry',
-      description: 'Balance your features and improve proportions',
-      color: AppColors.tertiary,
-    ),
-    Goal(
-      id: 'posture',
-      emoji: '🧘',
-      title: 'Elite Posture',
-      description: 'Stand tall with professional body alignment correction',
-      color: Colors.blue,
-    ),
-    Goal(
-      id: 'style',
-      emoji: '👔',
-      title: 'Style Elevation',
-      description: 'Curate a high-status wardrobe and fashion sense',
-      color: Colors.deepPurple,
-    ),
-    Goal(
-      id: 'hair',
-      emoji: '💇',
-      title: 'Hair Vitality',
-      description: 'Optimize growth and thickness with expert routines',
-      color: Colors.orange,
-    ),
-    Goal(
-      id: 'muscle',
-      emoji: '💪',
-      title: 'Muscle Definition',
-      description: 'Tone your physique for a sharper, athletic silhouette',
-      color: AppColors.warning,
-    ),
-    Goal(
-      id: 'mindset',
-      emoji: '🧠',
-      title: 'Iron Mindset',
-      description: 'Develop discipline and unbreakable self-confidence',
-      color: Colors.redAccent,
-    ),
-    Goal(
-      id: 'discipline',
-      emoji: '📈',
-      title: 'Daily Discipline',
-      description: 'Master consistency and track your long-term evolution',
-      color: const Color(0xFF10B981),
-    ),
+  final List<Map<String, String>> _availableGoals = [
+    {'title': 'Sharp Jawline 📐', 'desc': 'Chisel structure & mewing'},
+    {'title': 'Clear Skin 🧼', 'desc': 'Reduce acne & glow skin'},
+    {'title': 'Fix Posture 🧍', 'desc': 'Align spine & stand tall'},
+    {'title': 'Better Dressing 👔', 'desc': 'Aesthetics & style fits'},
   ];
 
-  Set<String> selectedGoals = {};
-  bool _isLoading = false;
-
-  void _toggleGoal(String goalId) {
+  void _toggleGoal(String goal) {
     setState(() {
-      if (selectedGoals.contains(goalId)) {
-        selectedGoals.remove(goalId);
+      if (_selectedGoals.contains(goal)) {
+        _selectedGoals.remove(goal);
       } else {
-        selectedGoals.add(goalId);
+        _selectedGoals.add(goal);
       }
     });
   }
 
-  void _handleContinue() {
-    if (selectedGoals.isEmpty) {
+  Future<void> _completeSelection() async {
+    if (_selectedGoals.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select at least one goal'),
-          backgroundColor: AppColors.error,
+        SnackBar(
+          content: Text('Please select at least one goal.', style: GoogleFonts.outfit()),
+          backgroundColor: AppTheme.danger,
         ),
       );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
-
-    // Save goals and complete onboarding
-    _saveGoalsAndNavigate();
-  }
-
-  Future<void> _saveGoalsAndNavigate() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // Save selected goals as comma-separated string
-      await prefs.setString('selectedGoals', selectedGoals.join(','));
-      
-      // Mark onboarding as complete (if not already done by auth screen)
-      await prefs.setBool('isOnboardingComplete', true);
-      
-      // Wait a bit to simulate saving
-      await Future.delayed(const Duration(seconds: 1));
-      
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/face-scan-intro');
-      }
-    } catch (e) {
-      debugPrint('Error saving goals: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error saving your goals. Please try again.'),
-            backgroundColor: AppColors.error,
-          ),
+    // Save states to Riverpod
+    ref.read(userStateProvider.notifier).updateGoals(_selectedGoals);
+    ref.read(userStateProvider.notifier).updateLifestyle(
+          skinType: _selectedSkinType,
+          budget: _selectedBudget,
         );
+    ref.read(userStateProvider.notifier).completeOnboarding();
+
+    // Save to Firestore
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await FirestoreService().updateUser(user.uid, {
+          'goals': _selectedGoals,
+          'skin_type': _selectedSkinType,
+          'budget': _selectedBudget,
+          'onboarding_completed': true,
+        });
+      } catch (e) {
+        debugPrint('Error saving goals to Firestore: $e');
       }
+    }
+
+    // Route: show backup consent screen first time, then camera scan
+    if (mounted) {
+      final hasConsent = BackupPreferenceService().hasShownConsent;
+      Navigator.of(context)
+          .pushReplacementNamed(hasConsent ? '/camera-scan' : '/backup-consent');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false, // Lock navigation
-      child: Scaffold(
-        backgroundColor: AppColors.surfaceLowest,
-        appBar: AppBar(
-          backgroundColor: AppColors.surfaceLowest,
-          elevation: 0,
-          automaticallyImplyLeading: false, // Remove back button
-          title: Text(
-            'STEP 2/2',
-            style: AppTypography.eyebrow.copyWith(color: AppColors.primary),
-          ),
-          centerTitle: true,
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppTheme.backgroundGradient,
         ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header
-                      Text(
-                        'Choose Your Goals',
-                        style: AppTypography.displayMedium.copyWith(
-                          color: AppColors.onSurface,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Select what you want to improve. You can change this later.',
-                        style: AppTypography.bodyLarge.copyWith(
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                Text(
+                  'Set Your Target',
+                  style: GoogleFonts.outfit(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Choose what you want to improve first.',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 32),
 
-                      // Goals Grid
-                      ...goals.map((goal) {
-                        final isSelected = selectedGoals.contains(goal.id);
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: _buildGoalCard(goal, isSelected),
-                        );
-                      }),
-
-                      const SizedBox(height: 24),
-
-                      // Info box
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.secondary.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.info,
-                              color: AppColors.secondary,
-                              size: 20,
+                // Step 1: Goals
+                Text(
+                  'SELECT YOUR GOALS',
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2.0,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Column(
+                  children: _availableGoals.map((g) {
+                    final title = g['title']!;
+                    final desc = g['desc']!;
+                    final isSelected = _selectedGoals.contains(title);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: GestureDetector(
+                        onTap: () => _toggleGoal(title),
+                        child: Container(
+                          padding: const EdgeInsets.all(16.0),
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppTheme.primary.withAlpha(40) : Colors.white.withAlpha(10),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isSelected ? AppTheme.primary : Colors.white.withAlpha(20),
+                              width: 1.5,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'You\'ll receive daily missions and expert guidance specific to your goals.',
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: AppColors.onSurfaceVariant,
-                                  height: 1.5,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      title,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      desc,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
-                          ],
+                              Icon(
+                                isSelected ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
+                                color: isSelected ? AppTheme.primary : Colors.white24,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 120), // Bottom space for floating button
-                    ],
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+
+                // Step 2: Skin & Budget
+                Text(
+                  'YOUR DETAILS',
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2.0,
+                    color: AppTheme.textSecondary,
                   ),
                 ),
-              ),
-            ],
-          ),
-          
-          // Global Premium Button
-          BottomActionButton(
-            label: _isLoading ? 'CALCULATING PATH...' : 'CONTINUE',
-            icon: Icons.arrow_forward_rounded,
-            isLoading: _isLoading,
-            isPulsing: selectedGoals.isNotEmpty && !_isLoading,
-            onTap: selectedGoals.isEmpty || _isLoading ? null : _handleContinue,
-          ),
-          const VoiceGuideToggle(),
-        ],
-      ),
-    ),
-  );
-}
-
-  Widget _buildGoalCard(Goal goal, bool isSelected) {
-    return InkWell(
-      onTap: () => _toggleGoal(goal.id),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surfaceLow,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? goal.color : AppColors.outline.withValues(alpha: 0.2),
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: goal.color.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            // Checkbox
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isSelected ? goal.color : AppColors.outline.withValues(alpha: 0.1),
-                border: Border.all(
-                  color: isSelected ? goal.color : AppColors.outline.withValues(alpha: 0.3),
-                  width: 2,
-                ),
-              ),
-              child: isSelected
-                  ? Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 16,
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 16),
-
-            // Content
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                const SizedBox(height: 12),
+                GlassContainer(
+                  child: Column(
                     children: [
-                      Text(
-                        goal.emoji,
-                        style: const TextStyle(fontSize: 20),
+                      // Skin type dropdown
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Skin Type',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          DropdownButton<String>(
+                            value: _selectedSkinType,
+                            dropdownColor: AppTheme.surface,
+                            underline: Container(),
+                            style: GoogleFonts.outfit(color: AppTheme.secondary, fontWeight: FontWeight.bold),
+                            items: ['Oily', 'Dry', 'Mixed'].map((t) {
+                              return DropdownMenuItem(value: t, child: Text(t));
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => _selectedSkinType = val);
+                              }
+                            },
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        goal.title,
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.onSurface,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      const Divider(color: Colors.white12),
+                      // Budget Type
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Monthly Budget',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          DropdownButton<String>(
+                            value: _selectedBudget,
+                            dropdownColor: AppTheme.surface,
+                            underline: Container(),
+                            style: GoogleFonts.outfit(color: AppTheme.secondary, fontWeight: FontWeight.bold),
+                            items: ['Basic', 'Premium'].map((b) {
+                              return DropdownMenuItem(value: b, child: Text(b));
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => _selectedBudget = val);
+                              }
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    goal.description,
-                    style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.onSurfaceVariant,
+                ),
+                const SizedBox(height: 40),
+
+                // Next Button
+                Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: AppTheme.primaryGradient,
+                  ),
+                  child: ElevatedButton(
+                    onPressed: _completeSelection,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'GENERATE AI SCANNER',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.bolt),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-
-            // Arrow
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: isSelected ? goal.color : AppColors.onSurfaceVariant.withValues(alpha: 0.4),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
-}
-
-class Goal {
-  final String id;
-  final String emoji;
-  final String title;
-  final String description;
-  final Color color;
-
-  Goal({
-    required this.id,
-    required this.emoji,
-    required this.title,
-    required this.description,
-    required this.color,
-  });
 }
