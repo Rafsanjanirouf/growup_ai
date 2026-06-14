@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
 /// Collected device information.
@@ -38,10 +37,7 @@ class DeviceService {
 
   static const int _maxAccountsPerDevice = 2;
 
-  final FirebaseFirestore _db = FirebaseFirestore.instanceFor(
-    app: Firebase.app(),
-    databaseId: 'growupai',
-  );
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   CollectionReference get _devices => _db.collection('devices');
   CollectionReference get _users => _db.collection('users');

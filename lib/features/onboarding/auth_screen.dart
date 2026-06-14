@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../core/services/auth_service.dart';
+import '../splash/auth_gate.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -32,8 +33,10 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       await _authService.signInWithEmailPassword(email, password);
       if (mounted) {
-        // Re-run full auth check via splash so routing is handled centrally
-        Navigator.of(context).pushReplacementNamed('/');
+        // Push AuthGate directly — it handles all routing logic centrally
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const AuthGate()),
+        );
       }
     } catch (e) {
       _showError(e.toString());
@@ -72,8 +75,10 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       final user = await _authService.signInWithGoogle();
       if (user != null && mounted) {
-        // Re-run full auth check via splash so routing is handled centrally
-        Navigator.of(context).pushReplacementNamed('/');
+        // Push AuthGate directly — it handles all routing logic centrally
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const AuthGate()),
+        );
       }
     } catch (e) {
       _showError(e.toString());
@@ -83,9 +88,10 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _showError(String message) {
+    final clean = message.replaceFirst('Exception: ', '');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: GoogleFonts.outfit()),
+        content: Text(clean, style: GoogleFonts.outfit()),
         backgroundColor: AppTheme.danger,
       ),
     );

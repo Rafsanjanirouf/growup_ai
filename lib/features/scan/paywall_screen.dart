@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -126,60 +127,34 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen>
   @override
   Widget build(BuildContext context) {
     // ── Loading ──────────────────────────────────────────────────────────────
-    if (_loading) return _buildLoading();
+    if (_loading) return const PopScope(canPop: false, child: _BeautifulPaywallLoader());
 
     // ── RC PaywallView — the main path ───────────────────────────────────────
     if (_offering != null) {
-      return PaywallView(
-        offering: _offering,
-        onDismiss: () {
-          if (Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
-          } else {
-            Navigator.of(context).pushReplacementNamed('/camera-scan');
-          }
-        },
-        onPurchaseCompleted: (customerInfo, storeTransaction) async {
-          await _handleSuccess();
-        },
-        onRestoreCompleted: (customerInfo) async {
-          if (customerInfo.entitlements.active.containsKey(RCConfig.entitlement)) {
+      return PopScope(
+        canPop: false,
+        child: PaywallView(
+          offering: _offering,
+          onPurchaseCompleted: (customerInfo, storeTransaction) async {
             await _handleSuccess();
-          }
-        },
-        onPurchaseError: (error) {
-          if (mounted) setState(() => _errorMessage = error.message);
-        },
+          },
+          onRestoreCompleted: (customerInfo) async {
+            if (customerInfo.entitlements.active.containsKey(RCConfig.entitlement)) {
+              await _handleSuccess();
+            }
+          },
+          onPurchaseError: (error) {
+            if (mounted) setState(() => _errorMessage = error.message);
+          },
+        ),
       );
     }
 
     // ── RC offering not configured yet — branded wait screen ─────────────────
-    return _buildWaitScreen();
+    return PopScope(canPop: false, child: _buildWaitScreen());
   }
 
-  // ── Loading spinner ───────────────────────────────────────────────────────
 
-  Widget _buildLoading() {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
-        child: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(color: AppTheme.secondary),
-              SizedBox(height: 20),
-              Text(
-                'Loading subscription plans...',
-                style: TextStyle(color: Colors.white70),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   // ── Branded wait/error screen (RC not configured yet) ────────────────────
 
@@ -281,30 +256,207 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen>
                       fontSize: 13,
                       color: Colors.white38,
                       decoration: TextDecoration.underline,
-                      decorationColor: Colors.white38,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Skip / back
-                TextButton(
-                  onPressed: () {
-                    if (Navigator.of(context).canPop()) {
-                      Navigator.of(context).pop();
-                    } else {
-                      Navigator.of(context).pushReplacementNamed('/camera-scan');
-                    }
-                  },
-                  child: Text(
-                    'Skip for now',
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: Colors.white24,
                     ),
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Premium Animated Loader Widget
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _BeautifulPaywallLoader extends StatefulWidget {
+  const _BeautifulPaywallLoader();
+
+  @override
+  State<_BeautifulPaywallLoader> createState() => _BeautifulPaywallLoaderState();
+}
+
+class _BeautifulPaywallLoaderState extends State<_BeautifulPaywallLoader>
+    with TickerProviderStateMixin {
+  late AnimationController _rotateCtrl;
+  late AnimationController _pulseCtrl;
+  late Animation<double> _pulseAnim;
+
+  int _textIndex = 0;
+  Timer? _textTimer;
+
+  final List<String> _loadingTexts = [
+    'Connecting to secure store services...',
+    'Retrieving Aura Pro premium plans...',
+    'Syncing subscription packages...',
+    'Preparing premium layout...',
+    'Securing checkout interface...',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _rotateCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    _pulseAnim = Tween<double>(begin: 0.8, end: 1.15).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
+    );
+
+    _textTimer = Timer.periodic(const Duration(milliseconds: 1800), (timer) {
+      if (mounted) {
+        setState(() {
+          _textIndex = (_textIndex + 1) % _loadingTexts.length;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _rotateCtrl.dispose();
+    _pulseCtrl.dispose();
+    _textTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      body: Container(
+        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Beautiful rotating & pulsing loader
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Rotating outer gradient halo border
+                      RotationTransition(
+                        turns: _rotateCtrl,
+                        child: Container(
+                          width: 110,
+                          height: 110,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: SweepGradient(
+                              colors: [
+                                AppTheme.secondary.withAlpha(0),
+                                AppTheme.secondary,
+                                AppTheme.primary,
+                                AppTheme.secondary.withAlpha(0),
+                              ],
+                              stops: const [0.0, 0.25, 0.75, 1.0],
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(3.0),
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                color: AppTheme.background,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Outer soft pulsing glow ring
+                      AnimatedBuilder(
+                        animation: _pulseAnim,
+                        builder: (context, child) => Container(
+                          width: 95 * _pulseAnim.value,
+                          height: 95 * _pulseAnim.value,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppTheme.primary.withAlpha(15),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.secondary.withAlpha(40),
+                                blurRadius: 25,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Core logo icon with background gradient
+                      Container(
+                        width: 75,
+                        height: 75,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: AppTheme.primaryGradient,
+                        ),
+                        child: const Icon(
+                          Icons.auto_awesome_rounded,
+                          color: Colors.white,
+                          size: 36,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 48),
+
+                  // Brand Loading Header
+                  Text(
+                    'AURA PRO',
+                    style: GoogleFonts.outfit(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 2.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Fading dynamic helper text
+                  SizedBox(
+                    height: 48,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 400),
+                      transitionBuilder: (Widget child, Animation<double> animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0.0, 0.2),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Text(
+                        _loadingTexts[_textIndex],
+                        key: ValueKey<int>(_textIndex),
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          color: Colors.white54,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

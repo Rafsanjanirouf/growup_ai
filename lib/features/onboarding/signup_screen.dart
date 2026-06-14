@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../core/services/auth_service.dart';
+import '../splash/auth_gate.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -57,7 +58,10 @@ class _SignupScreenState extends State<SignupScreen> {
     try {
       final user = await _authService.signInWithGoogle();
       if (user != null && mounted) {
-        Navigator.of(context).pushReplacementNamed('/profile-setup');
+        // Route through AuthGate — handles both new and returning Google users
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const AuthGate()),
+        );
       }
     } catch (e) {
       _showError(e.toString());
@@ -67,9 +71,10 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   void _showError(String message) {
+    final clean = message.replaceFirst('Exception: ', '');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: GoogleFonts.outfit()),
+        content: Text(clean, style: GoogleFonts.outfit()),
         backgroundColor: AppTheme.danger,
       ),
     );

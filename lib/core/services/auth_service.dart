@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'device_service.dart';
 import 'firestore_service.dart';
@@ -13,33 +14,40 @@ class AuthService {
 
   // ── Internal: collect device info, save user, register device ──────────────
 
-  Future<void> _onUserCreated(User user) async {
-    // 1. Collect device fingerprint
-    final deviceInfo = await _deviceService.collectDeviceInfo();
-
-    // 2. Create Firestore user document with device info
-    await FirestoreService().createUserIfNotExists(
-      user,
-      deviceId: deviceInfo.deviceId,
-      deviceModel: deviceInfo.deviceModel,
-      deviceOs: deviceInfo.deviceOs,
-      deviceBrand: deviceInfo.brand,
-    );
-
-    // 3. Register device + check for suspicious activity (auto-blocks if needed)
-    await _deviceService.registerAndCheckDevice(user.uid, deviceInfo);
+  Future<void> _onUserCreated(User user, {String authProvider = 'auth-- email'}) async {
+    // Fire-and-forget: device/Firestore errors must never block auth
+    try {
+      final deviceInfo = await _deviceService.collectDeviceInfo();
+      await FirestoreService().createUserIfNotExists(
+        user,
+        deviceId: deviceInfo.deviceId,
+        deviceModel: deviceInfo.deviceModel,
+        deviceOs: deviceInfo.deviceOs,
+        deviceBrand: deviceInfo.brand,
+        authProvider: authProvider,
+      );
+      await _deviceService.registerAndCheckDevice(user.uid, deviceInfo);
+    } catch (e) {
+      debugPrint('AuthService._onUserCreated (non-fatal): $e');
+    }
   }
 
   /// Same logic for sign-in: update device info in case device changed.
-  Future<void> _onUserSignedIn(User user) async {
-    final deviceInfo = await _deviceService.collectDeviceInfo();
-    await FirestoreService().createUserIfNotExists(
-      user,
-      deviceId: deviceInfo.deviceId,
-      deviceModel: deviceInfo.deviceModel,
-      deviceOs: deviceInfo.deviceOs,
-      deviceBrand: deviceInfo.brand,
-    );
+  Future<void> _onUserSignedIn(User user, {String authProvider = 'auth-- email'}) async {
+    // Fire-and-forget: device/Firestore errors must never block auth
+    try {
+      final deviceInfo = await _deviceService.collectDeviceInfo();
+      await FirestoreService().createUserIfNotExists(
+        user,
+        deviceId: deviceInfo.deviceId,
+        deviceModel: deviceInfo.deviceModel,
+        deviceOs: deviceInfo.deviceOs,
+        deviceBrand: deviceInfo.brand,
+        authProvider: authProvider,
+      );
+    } catch (e) {
+      debugPrint('AuthService._onUserSignedIn (non-fatal): $e');
+    }
   }
 
   // ── Sign in with Email and Password ─────────────────────────────────────────
@@ -49,9 +57,11 @@ class AuthService {
       final credential = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
       if (credential.user != null) {
-        await _onUserSignedIn(credential.user!);
+        _onUserSignedIn(credential.user!); // non-blocking
       }
       return credential;
+    } on FirebaseAuthException catch (e) {
+      throw _friendlyAuthError(e);
     } catch (e) {
       rethrow;
     }
@@ -64,9 +74,11 @@ class AuthService {
       final credential = await _auth.createUserWithEmailAndPassword(
           email: email, password: password);
       if (credential.user != null) {
-        await _onUserCreated(credential.user!);
+        _onUserCreated(credential.user!); // non-blocking
       }
       return credential;
+    } on FirebaseAuthException catch (e) {
+      throw _friendlyAuthError(e);
     } catch (e) {
       rethrow;
     }
@@ -76,6 +88,9 @@ class AuthService {
 
   Future<User?> signInWithGoogle() async {
     try {
+      // Force account selector to show up
+      await _googleSignIn.signOut();
+      
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null; // User cancelled
 
@@ -89,14 +104,40 @@ class AuthService {
 
       final userCredential = await _auth.signInWithCredential(credential);
       if (userCredential.user != null) {
-        // For Google sign-in we don't know if it's new or returning, 
-        // createUserIfNotExists handles both cases
-        await _onUserCreated(userCredential.user!);
+        _onUserCreated(userCredential.user!, authProvider: 'auth-- google'); // non-blocking
       }
 
       return userCredential.user;
+    } on FirebaseAuthException catch (e) {
+      throw _friendlyAuthError(e);
     } catch (e) {
       rethrow;
+    }
+  }
+
+  // ── Friendly error messages ───────────────────────────────────────────────────
+
+  Exception _friendlyAuthError(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'user-not-found':
+        return Exception('No account found with this email.');
+      case 'wrong-password':
+      case 'invalid-credential':
+        return Exception('Incorrect email or password.');
+      case 'email-already-in-use':
+        return Exception('An account already exists with this email.');
+      case 'weak-password':
+        return Exception('Password must be at least 6 characters.');
+      case 'invalid-email':
+        return Exception('Please enter a valid email address.');
+      case 'too-many-requests':
+        return Exception('Too many attempts. Please try again later.');
+      case 'network-request-failed':
+        return Exception('Network error. Check your internet connection.');
+      case 'user-disabled':
+        return Exception('This account has been disabled.');
+      default:
+        return Exception(e.message ?? 'Authentication failed. Please try again.');
     }
   }
 

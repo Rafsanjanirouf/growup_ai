@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 /// ─────────────────────────────────────────────────────────────────────────────
 /// RevenueCat entitlement identifier — must match your RevenueCat dashboard.
@@ -15,7 +14,7 @@ class RCConfig {
   static const String entitlement = 'MobTeam Pro';
 
   /// Offering identifier (use 'default' unless you created a custom one).
-  static const String offering = 'default';
+  static const String offering = 'New Offer 2';
 }
 
 /// ─────────────────────────────────────────────────────────────────────────────
@@ -85,10 +84,7 @@ class SubscriptionService {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final db = FirebaseFirestore.instanceFor(
-          app: Firebase.app(),
-          databaseId: 'growupai',
-        );
+        final db = FirebaseFirestore.instance;
         final subDoc = await db.collection('subscription').doc(user.uid).get();
         if (subDoc.exists) {
           final data = subDoc.data() as Map<String, dynamic>;
@@ -110,7 +106,7 @@ class SubscriptionService {
     } catch (e) {
       debugPrint('SubscriptionService.isProEntitled Firestore check error: $e');
     }
-    
+
     return false;
   }
 
@@ -130,7 +126,8 @@ class SubscriptionService {
       final offerings = await Purchases.getOfferings();
       // First try to explicitly get the offering we configured (e.g., 'default')
       final configuredOffering = offerings.getOffering(RCConfig.offering);
-      if (configuredOffering != null && configuredOffering.availablePackages.isNotEmpty) {
+      if (configuredOffering != null &&
+          configuredOffering.availablePackages.isNotEmpty) {
         return configuredOffering;
       }
       // Fallback to whatever is marked as current in the dashboard
@@ -147,8 +144,8 @@ class SubscriptionService {
   /// Returns [CustomerInfo] on success, null on cancellation or error.
   Future<CustomerInfo?> purchasePackage(Package package) async {
     try {
-      final result = await Purchases.purchasePackage(package);
-      return result;
+      final result = await Purchases.purchase(PurchaseParams.package(package));
+      return result.customerInfo;
     } on PurchasesErrorCode catch (e) {
       if (e == PurchasesErrorCode.purchaseCancelledError) {
         debugPrint('SubscriptionService: purchase cancelled by user');
@@ -212,11 +209,13 @@ class SubscriptionService {
       // Fetch the StoreProduct list for these IDs
       final products = await Purchases.getProducts([productId]);
       if (products.isEmpty) {
-        debugPrint('SubscriptionService.purchaseProductById: product not found → $productId');
+        debugPrint(
+          'SubscriptionService.purchaseProductById: product not found → $productId',
+        );
         return null;
       }
-      final result = await Purchases.purchaseStoreProduct(products.first);
-      return result;
+      final result = await Purchases.purchase(PurchaseParams.storeProduct(products.first));
+      return result.customerInfo;
     } on PurchasesErrorCode catch (e) {
       if (e == PurchasesErrorCode.purchaseCancelledError) {
         debugPrint('SubscriptionService: purchase cancelled by user');
@@ -225,7 +224,9 @@ class SubscriptionService {
       }
       return null;
     } catch (e) {
-      debugPrint('SubscriptionService.purchaseProductById unexpected error: $e');
+      debugPrint(
+        'SubscriptionService.purchaseProductById unexpected error: $e',
+      );
       return null;
     }
   }

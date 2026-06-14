@@ -10,7 +10,6 @@ import '../services/local_db_service.dart';
 import '../services/gemini_service.dart';
 import '../services/backup_preference_service.dart';
 import '../providers/scan_history_provider.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 /// Background sync service.
 /// - Text/score data is ALWAYS pushed to Firestore (survives app data clear).
@@ -245,10 +244,7 @@ class SyncService {
     if (user == null) return [];
     
     try {
-      final db = FirebaseFirestore.instanceFor(
-        app: Firebase.app(),
-        databaseId: 'growupai',
-      );
+      final db = FirebaseFirestore.instance;
       final snapshot = await db.collection('daily_progress')
           .where('user_id', isEqualTo: user.uid)
           .get();

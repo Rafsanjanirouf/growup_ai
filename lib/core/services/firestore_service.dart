@@ -1,19 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 
-/// Singleton-style Firestore service that writes to the "growupai" database.
+/// Singleton-style Firestore service that writes to the default database.
 /// All collections follow the flat root-collection schema in database_schema.md.
 class FirestoreService {
   static final FirestoreService _instance = FirestoreService._internal();
   factory FirestoreService() => _instance;
   FirestoreService._internal();
 
-  final FirebaseFirestore _db = FirebaseFirestore.instanceFor(
-    app: Firebase.app(),
-    databaseId: 'growupai',
-  );
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   // ── Collection refs ─────────────────────────────────────────────────────────
   CollectionReference get _users       => _db.collection('users');
@@ -32,6 +28,7 @@ class FirestoreService {
     String deviceModel = '',
     String deviceOs = '',
     String deviceBrand = '',
+    String authProvider = 'auth-- email',
   }) async {
     try {
       final doc = await _users.doc(user.uid).get();
@@ -41,15 +38,22 @@ class FirestoreService {
           'email':                user.email ?? '',
           'display_name':         user.displayName ?? '',
           'photo_url':            user.photoURL ?? '',
+          'auth_provider':        authProvider,
           'age':                  18,
           'gender':               '',
           'skin_type':            '',
+          'skinType':             '',
           'budget':               '',
           'goals':                [],
+          'problems':             [],
           'current_streak':       0,
           'aura_score':           0.0,
           'is_pro':               false,
           'onboarding_completed': false,
+          'profileCompleted':     false,
+          'completedAt':          null,
+          'language':             'English',
+          'languageLocale':       'en-US',
           // Device fingerprint fields
           'device_id':            deviceId,
           'device_model':         deviceModel,
@@ -64,15 +68,23 @@ class FirestoreService {
         });
       } else {
         // If user already exists, still update device info (e.g. login on new device)
+        final updateData = <String, dynamic>{
+          'updated_at': FieldValue.serverTimestamp(),
+          'auth_provider': authProvider,
+        };
         if (deviceId.isNotEmpty) {
-          await _users.doc(user.uid).update({
-            'device_id':    deviceId,
-            'device_model': deviceModel,
-            'device_os':    deviceOs,
-            'device_brand': deviceBrand,
-            'updated_at':   FieldValue.serverTimestamp(),
-          });
+          updateData['device_id'] = deviceId;
+          updateData['device_model'] = deviceModel;
+          updateData['device_os'] = deviceOs;
+          updateData['device_brand'] = deviceBrand;
         }
+        if (user.displayName != null && user.displayName!.isNotEmpty) {
+          updateData['display_name'] = user.displayName;
+        }
+        if (user.photoURL != null && user.photoURL!.isNotEmpty) {
+          updateData['photo_url'] = user.photoURL;
+        }
+        await _users.doc(user.uid).update(updateData);
       }
     } catch (e) {
       debugPrint('FirestoreService.createUserIfNotExists error: $e');

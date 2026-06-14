@@ -17,22 +17,42 @@ class GoalSelectionScreen extends ConsumerStatefulWidget {
 
 class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
   final List<String> _selectedGoals = [];
+  final List<String> _selectedProblems = [];
   String _selectedSkinType = 'Oily';
   String _selectedBudget = 'Basic';
 
   final List<Map<String, String>> _availableGoals = [
-    {'title': 'Sharp Jawline 📐', 'desc': 'Chisel structure & mewing'},
-    {'title': 'Clear Skin 🧼', 'desc': 'Reduce acne & glow skin'},
-    {'title': 'Fix Posture 🧍', 'desc': 'Align spine & stand tall'},
-    {'title': 'Better Dressing 👔', 'desc': 'Aesthetics & style fits'},
+    {'id': 'hair_growth', 'title': 'Hair Growth 💇‍♂️', 'desc': 'Stop hair fall & stimulate growth'},
+    {'id': 'better_sleep', 'title': 'Better Sleep 😴', 'desc': 'Optimize sleep quality & energy'},
+    {'id': 'lips_pink', 'title': 'Pink Lips 👄', 'desc': 'Reduce pigmentation & hydrate'},
+    {'id': 'skin_glow', 'title': 'Skin Glow ✨', 'desc': 'Clear skin, reduce blemishes & glow'},
   ];
 
-  void _toggleGoal(String goal) {
+  final List<Map<String, String>> _availableProblems = [
+    {'id': 'acne', 'title': 'Acne 🧼', 'desc': 'Pimples, whiteheads & blackheads'},
+    {'id': 'dark_circles', 'title': 'Dark Circles 🐼', 'desc': 'Tired eyes & under-eye shadows'},
+    {'id': 'hair_fall', 'title': 'Hair Fall 💇', 'desc': 'Thinning hairline & shedding'},
+    {'id': 'weight', 'title': 'Weight Issues ⚖️', 'desc': 'Bulk, cut, or BMI management'},
+    {'id': 'dull', 'title': 'Dull Skin 🌫️', 'desc': 'Dry, tired-looking complexion'},
+    {'id': 'dark_spots', 'title': 'Dark Spots 🟤', 'desc': 'Hyperpigmentation & spots'},
+  ];
+
+  void _toggleGoal(String id) {
     setState(() {
-      if (_selectedGoals.contains(goal)) {
-        _selectedGoals.remove(goal);
+      if (_selectedGoals.contains(id)) {
+        _selectedGoals.remove(id);
       } else {
-        _selectedGoals.add(goal);
+        _selectedGoals.add(id);
+      }
+    });
+  }
+
+  void _toggleProblem(String id) {
+    setState(() {
+      if (_selectedProblems.contains(id)) {
+        _selectedProblems.remove(id);
+      } else {
+        _selectedProblems.add(id);
       }
     });
   }
@@ -42,6 +62,16 @@ class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Please select at least one goal.', style: GoogleFonts.outfit()),
+          backgroundColor: AppTheme.danger,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedProblems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please select at least one problem.', style: GoogleFonts.outfit()),
           backgroundColor: AppTheme.danger,
         ),
       );
@@ -62,8 +92,14 @@ class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
       try {
         await FirestoreService().updateUser(user.uid, {
           'goals': _selectedGoals,
-          'skin_type': _selectedSkinType,
+          'problems': _selectedProblems,
+          'skinType': _selectedSkinType,
+          'skin_type': _selectedSkinType, // fallback
           'budget': _selectedBudget,
+          'language': 'English',
+          'languageLocale': 'en-US',
+          'profileCompleted': true,
+          'completedAt': DateTime.now().millisecondsSinceEpoch,
           'onboarding_completed': true,
         });
       } catch (e) {
@@ -124,13 +160,14 @@ class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
                 const SizedBox(height: 12),
                 Column(
                   children: _availableGoals.map((g) {
+                    final id = g['id']!;
                     final title = g['title']!;
                     final desc = g['desc']!;
-                    final isSelected = _selectedGoals.contains(title);
+                    final isSelected = _selectedGoals.contains(id);
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12.0),
                       child: GestureDetector(
-                        onTap: () => _toggleGoal(title),
+                        onTap: () => _toggleGoal(id),
                         child: Container(
                           padding: const EdgeInsets.all(16.0),
                           decoration: BoxDecoration(
@@ -169,6 +206,75 @@ class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
                               Icon(
                                 isSelected ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
                                 color: isSelected ? AppTheme.primary : Colors.white24,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+
+                // Step 1.5: Problems
+                Text(
+                  'SELECT YOUR PROBLEMS',
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2.0,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Column(
+                  children: _availableProblems.map((p) {
+                    final id = p['id']!;
+                    final title = p['title']!;
+                    final desc = p['desc']!;
+                    final isSelected = _selectedProblems.contains(id);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: GestureDetector(
+                        onTap: () => _toggleProblem(id),
+                        child: Container(
+                          padding: const EdgeInsets.all(16.0),
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppTheme.secondary.withAlpha(40) : Colors.white.withAlpha(10),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isSelected ? AppTheme.secondary : Colors.white.withAlpha(20),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      title,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      desc,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                isSelected ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
+                                color: isSelected ? AppTheme.secondary : Colors.white24,
                               ),
                             ],
                           ),

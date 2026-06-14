@@ -12,6 +12,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/services/local_db_service.dart';
 import '../../core/services/firestore_service.dart';
 import '../../core/services/gemini_service.dart';
+import '../../core/config/app_languages.dart';
 import 'chat_history_screen.dart';
 
 class ChatMessage {
@@ -279,30 +280,37 @@ class _AICoachScreenState extends State<AICoachScreen> {
                         child: const Icon(Icons.language_rounded, color: Colors.greenAccent, size: 20),
                       ),
                       title: Text('Language', style: GoogleFonts.outfit(color: Colors.white, fontSize: 16)),
-                      trailing: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedLanguage,
-                          icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-                          dropdownColor: AppTheme.surface,
-                          style: GoogleFonts.outfit(color: Colors.white, fontSize: 14),
-                          onChanged: (String? newValue) {
-                            if (newValue != null) {
-                              setModalState(() => _selectedLanguage = newValue);
-                              setState(() => _selectedLanguage = newValue);
-                              final user = FirebaseAuth.instance.currentUser;
-                              if (user != null) {
-                                FirestoreService().updateUser(user.uid, {'coach_language': newValue});
-                              }
-                            }
-                          },
-                          items: _languages.map<DropdownMenuItem<String>>((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value),
-                            );
-                          }).toList(),
-                        ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _selectedLanguage,
+                            style: GoogleFonts.outfit(color: Colors.white, fontSize: 14),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.chevron_right_rounded, color: Colors.white54),
+                        ],
                       ),
+                      onTap: () async {
+                        final chosen = await showModalBottomSheet<String>(
+                          context: context,
+                          backgroundColor: Colors.transparent,
+                          isDismissible: true,
+                          enableDrag: true,
+                          isScrollControlled: true,
+                          builder: (ctx) => _CoachLanguagePickerSheet(
+                            selectedLanguage: _selectedLanguage,
+                          ),
+                        );
+                        if (chosen != null && mounted) {
+                          setModalState(() => _selectedLanguage = chosen);
+                          setState(() => _selectedLanguage = chosen);
+                          final user = FirebaseAuth.instance.currentUser;
+                          if (user != null) {
+                            FirestoreService().updateUser(user.uid, {'coach_language': chosen});
+                          }
+                        }
+                      },
                     ),
                   ],
                 ),
@@ -864,6 +872,192 @@ class _AICoachScreenState extends State<AICoachScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _CoachLanguagePickerSheet extends StatefulWidget {
+  final String selectedLanguage;
+  const _CoachLanguagePickerSheet({required this.selectedLanguage});
+
+  @override
+  State<_CoachLanguagePickerSheet> createState() =>
+      _CoachLanguagePickerSheetState();
+}
+
+class _CoachLanguagePickerSheetState
+    extends State<_CoachLanguagePickerSheet> {
+  late String _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.selectedLanguage;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: AppTheme.backgroundGradient,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle bar
+          Center(
+            child: Container(
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.secondary.withAlpha(30),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppTheme.secondary.withAlpha(60)),
+                ),
+                child: const Icon(Icons.translate_rounded,
+                    color: AppTheme.secondary, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Coach Language',
+                    style: GoogleFonts.outfit(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    'AURA AI speaking language',
+                    style: GoogleFonts.outfit(
+                        fontSize: 12, color: AppTheme.textSecondary),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Language Grid
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: AppLanguages.all.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 2.7,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
+            itemBuilder: (context, index) {
+              final lang = AppLanguages.all[index];
+              final isSelected = _selected == lang['name'];
+              return GestureDetector(
+                onTap: () => setState(() => _selected = lang['name']!),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppTheme.secondary.withAlpha(35)
+                        : Colors.white.withAlpha(8),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppTheme.secondary
+                          : Colors.white.withAlpha(20),
+                      width: isSelected ? 1.5 : 1.0,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppTheme.secondary.withAlpha(40),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            )
+                          ]
+                        : [],
+                  ),
+                  child: Row(
+                    children: [
+                      Text(lang['flag']!, style: const TextStyle(fontSize: 20)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              lang['name']!,
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected ? AppTheme.secondary : Colors.white,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              lang['native']!,
+                              style: GoogleFonts.outfit(
+                                  fontSize: 10, color: Colors.white38),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (isSelected)
+                        const Icon(Icons.check_circle_rounded,
+                            color: AppTheme.secondary, size: 16),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 32),
+          // Save Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context, _selected),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 4,
+                shadowColor: AppTheme.primary.withAlpha(100),
+              ),
+              child: Text(
+                'Select Language',
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
