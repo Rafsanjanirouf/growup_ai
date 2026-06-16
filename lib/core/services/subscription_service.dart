@@ -2,13 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../config/api_keys.dart';
 
 /// ─────────────────────────────────────────────────────────────────────────────
 /// RevenueCat entitlement identifier — must match your RevenueCat dashboard.
 /// ─────────────────────────────────────────────────────────────────────────────
 class RCConfig {
   /// RevenueCat Android API key (test key — swap for prod before release).
-  static const String androidApiKey = 'goog_FWqbrJpdtdoYPhClYIEqImlcBkH';
+  static const String androidApiKey = ApiKeys.revenueCatApiKey;
 
   /// Entitlement ID configured on the RevenueCat dashboard.
   static const String entitlement = 'MobTeam Pro';

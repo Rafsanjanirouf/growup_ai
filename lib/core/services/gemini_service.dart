@@ -2,10 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import '../config/api_keys.dart';
 import '../providers/habit_provider.dart';
 
 class GeminiService {
-  static const String _apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: 'AQ.Ab8RN6KLlPJtuLUMvF02-rGqHrVfp9EpVZ4Oc_VcxFRoAPOXCw');
+  static const String _apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: ApiKeys.geminiApiKey);
   /// Structured system prompt — returns ALL fields from database_schema.md scan_history table.
   static String analyticsSystemPrompt(String language) => '''
 You are Aura AI, an expert Lookmaxxing and aesthetics doctor coach.
