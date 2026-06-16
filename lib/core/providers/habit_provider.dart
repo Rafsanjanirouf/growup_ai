@@ -272,7 +272,10 @@ class HabitStateNotifier extends StateNotifier<List<Habit>> {
         scheduleTime = nightTime;
       }
 
-      if (scheduleTime != null && scheduleTime.isAfter(now)) {
+      if (scheduleTime != null) {
+        if (scheduleTime.isBefore(now)) {
+          scheduleTime = scheduleTime.add(const Duration(days: 1));
+        }
         NotificationService().scheduleTaskReminder(
           id: idCounter++,
           title: 'Time for your ${task.timeOfDay} routine!',

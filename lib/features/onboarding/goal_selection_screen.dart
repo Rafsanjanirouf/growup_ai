@@ -7,6 +7,7 @@ import '../../core/providers/user_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/services/firestore_service.dart';
 import '../../core/services/backup_preference_service.dart';
+import '../../core/services/local_db_service.dart';
 
 class GoalSelectionScreen extends ConsumerStatefulWidget {
   const GoalSelectionScreen({super.key});
@@ -110,8 +111,21 @@ class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
     // Route: show backup consent screen first time, then camera scan
     if (mounted) {
       final hasConsent = BackupPreferenceService().hasShownConsent;
-      Navigator.of(context)
-          .pushReplacementNamed(hasConsent ? '/camera-scan' : '/backup-consent');
+      if (hasConsent) {
+        if (user != null) {
+          final localScans = await LocalDbService().getAllScans(user.uid);
+          if (localScans.isNotEmpty) {
+            final lastScanDate = DateTime.parse(localScans.first['date'] as String);
+            if (DateTime.now().difference(lastScanDate).inDays < 7) {
+              if (mounted) Navigator.of(context).pushReplacementNamed('/dashboard');
+              return;
+            }
+          }
+        }
+        if (mounted) Navigator.of(context).pushReplacementNamed('/camera-scan');
+      } else {
+        if (mounted) Navigator.of(context).pushReplacementNamed('/backup-consent');
+      }
     }
   }
 

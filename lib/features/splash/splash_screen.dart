@@ -62,7 +62,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppTheme.bg,
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -79,8 +79,8 @@ class _SplashScreenState extends State<SplashScreen>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Colors.black.withAlpha(50),
-                  Colors.black.withAlpha(140),
+                  AppTheme.bg.withAlpha(50),
+                  AppTheme.bg.withAlpha(140),
                 ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
@@ -114,7 +114,7 @@ class _SplashScreenState extends State<SplashScreen>
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 3.0,
-                            color: Colors.white,
+                            color: AppTheme.textPrimary,
                           ),
                         ),
                         Text(
@@ -138,10 +138,10 @@ class _SplashScreenState extends State<SplashScreen>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 24, vertical: 32),
                           decoration: BoxDecoration(
-                            color: Colors.white.withAlpha(15),
+                            color: AppTheme.glassBg,
                             borderRadius: BorderRadius.circular(24),
                             border: Border.all(
-                              color: Colors.white.withAlpha(31),
+                              color: AppTheme.glassBorder,
                               width: 1.5,
                             ),
                             boxShadow: [
@@ -176,7 +176,7 @@ class _SplashScreenState extends State<SplashScreen>
                                     fontSize: 10,
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: 2.0,
-                                    color: Colors.white,
+                                    color: AppTheme.textPrimary,
                                   ),
                                 ),
                               ),
@@ -190,10 +190,10 @@ class _SplashScreenState extends State<SplashScreen>
                                   fontSize: 28,
                                   fontWeight: FontWeight.w900,
                                   height: 1.2,
-                                  color: Colors.white,
+                                  color: AppTheme.textPrimary,
                                   shadows: [
                                     Shadow(
-                                      color: Colors.black.withAlpha(128),
+                                      color: AppTheme.bg.withAlpha(128),
                                       offset: const Offset(0, 2),
                                       blurRadius: 10,
                                     )
@@ -209,7 +209,7 @@ class _SplashScreenState extends State<SplashScreen>
                                 style: GoogleFonts.outfit(
                                   fontSize: 14,
                                   fontWeight: FontWeight.normal,
-                                  color: Colors.white70,
+                                  color: AppTheme.textSecondary,
                                   height: 1.4,
                                 ),
                               ),
@@ -232,7 +232,7 @@ class _SplashScreenState extends State<SplashScreen>
                           'Powered by Ai (1.0 Vision)',
                           style: GoogleFonts.outfit(
                             fontSize: 11,
-                            color: Colors.white38,
+                            color: AppTheme.textMuted,
                             letterSpacing: 1.0,
                           ),
                         ),

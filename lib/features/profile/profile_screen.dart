@@ -125,62 +125,69 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          maxChildSize: 0.95,
-          minChildSize: 0.5,
-          expand: false,
-          builder: (_, controller) {
-            return Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 48,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.white24,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      const Icon(Icons.gavel_rounded, color: AppTheme.secondary),
-                      const SizedBox(width: 10),
-                      Text(
-                        title,
-                        style: GoogleFonts.outfit(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border(top: BorderSide(color: Colors.white12)),
+          ),
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.7,
+            maxChildSize: 0.95,
+            minChildSize: 0.5,
+            expand: false,
+            builder: (_, controller) {
+              return Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 48,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: ListView(
-                      controller: controller,
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
                       children: [
+                        const Icon(Icons.gavel_rounded, color: AppTheme.secondary),
+                        const SizedBox(width: 10),
                         Text(
-                          content,
+                          title,
                           style: GoogleFonts.outfit(
-                            fontSize: 14,
-                            color: AppTheme.textSecondary,
-                            height: 1.5,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-            );
-          },
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: ListView(
+                        controller: controller,
+                        children: [
+                          Text(
+                            content,
+                            style: GoogleFonts.outfit(
+                              fontSize: 14,
+                              color: AppTheme.textSecondary,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         );
       },
     );
@@ -195,12 +202,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) {
-        return Padding(
+        return Container(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(ctx).viewInsets.bottom,
             top: 24,
             left: 24,
             right: 24,
+          ),
+          decoration: const BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border(top: BorderSide(color: Colors.white12)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -235,9 +247,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   hintStyle: GoogleFonts.outfit(color: Colors.white30),
                   filled: true,
                   fillColor: Colors.black38,
-                  border: OutlineInputBorder(
+                  focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
+                    borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Colors.white10),
                   ),
                 ),
               ),

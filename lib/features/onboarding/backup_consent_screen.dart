@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/backup_preference_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/services/local_db_service.dart';
 
 /// Shown once after onboarding (goal selection) before the first camera scan.
 /// Lets the user explicitly choose whether to enable cloud backup.
@@ -47,7 +49,18 @@ class _BackupConsentScreenState extends State<BackupConsentScreen>
     await svc.markConsentShown();
 
     if (mounted) {
-      Navigator.of(context).pushReplacementNamed('/camera-scan');
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final localScans = await LocalDbService().getAllScans(user.uid);
+        if (localScans.isNotEmpty) {
+          final lastScanDate = DateTime.parse(localScans.first['date'] as String);
+          if (DateTime.now().difference(lastScanDate).inDays < 7) {
+            if (mounted) Navigator.of(context).pushReplacementNamed('/dashboard');
+            return;
+          }
+        }
+      }
+      if (mounted) Navigator.of(context).pushReplacementNamed('/camera-scan');
     }
   }
 

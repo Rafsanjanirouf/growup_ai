@@ -76,23 +76,37 @@ class _ScanDetailScreenState extends ConsumerState<ScanDetailScreen>
     final prev = widget.previousScan;
     final delta = prev != null ? _norm(scan.auraScore) - _norm(prev.auraScore) : null;
     final ratingColor = _ratingColor(scan.rating);
+    final bool canPop = Navigator.canPop(context);
 
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: Stack(
-        children: [
-          // ─── Scrollable content ─────────────────────────────────────────
-          CustomScrollView(
-            slivers: [
-              // Collapsible header
-              SliverAppBar(
-                expandedHeight: 220,
-                pinned: true,
-                backgroundColor: AppTheme.surface,
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && !canPop) {
+          Navigator.of(context).pushReplacementNamed('/dashboard');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppTheme.background,
+        body: Stack(
+          children: [
+            // ─── Scrollable content ─────────────────────────────────────────
+            CustomScrollView(
+              slivers: [
+                // Collapsible header
+                SliverAppBar(
+                  expandedHeight: 220,
+                  pinned: true,
+                  backgroundColor: AppTheme.surface,
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                    onPressed: () {
+                      if (canPop) {
+                        Navigator.pop(context);
+                      } else {
+                        Navigator.of(context).pushReplacementNamed('/dashboard');
+                      }
+                    },
+                  ),
                 actions: [
                   // Share button in AppBar
                   _isSharing
@@ -164,7 +178,7 @@ class _ScanDetailScreenState extends ConsumerState<ScanDetailScreen>
                       _buildAiInsightList('eyes'),
                       _buildMetricBar('Posture Score', scan.postureScore, '🏋️', AppTheme.success),
                       _buildAiInsightList('posture'),
-                      const SizedBox(height: 100), // space for FAB
+                      const SizedBox(height: 170), // space for FAB and Home button
                     ],
                   ),
                 ),
@@ -172,14 +186,22 @@ class _ScanDetailScreenState extends ConsumerState<ScanDetailScreen>
             ],
           ),
 
-          // ─── Sticky Share Button ────────────────────────────────────────
+          // ─── Sticky Bottom Buttons ────────────────────────────────────────
           Positioned(
             bottom: 24,
             left: 24,
             right: 24,
-            child: _buildShareFAB(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildShareFAB(),
+                const SizedBox(height: 12),
+                _buildHomeButton(canPop),
+              ],
+            ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -700,6 +722,42 @@ class _ScanDetailScreenState extends ConsumerState<ScanDetailScreen>
                 fontSize: 14,
                 fontWeight: FontWeight.w900,
                 color: Colors.white,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHomeButton(bool canPop) {
+    return GestureDetector(
+      onTap: () {
+        if (canPop) {
+          Navigator.pop(context);
+        } else {
+          Navigator.of(context).pushReplacementNamed('/dashboard');
+        }
+      },
+      child: Container(
+        height: 54,
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.home_rounded, color: Colors.white70, size: 20),
+            const SizedBox(width: 10),
+            Text(
+              'GO TO HOME',
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.white70,
                 letterSpacing: 0.5,
               ),
             ),
