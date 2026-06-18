@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import '../services/firestore_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // Provider for SharedPreferences overridden at startup in main.dart
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
@@ -27,6 +28,9 @@ class UserState {
   final String? noonTime;
   final String? eveningTime;
   final String? nightTime;
+  
+  final bool hasLostStreak;
+  final int lostStreakCount;
 
   String get effectiveMorningTime => morningTime ?? '06:00';
   String get effectiveNoonTime => noonTime ?? '12:00';
@@ -49,6 +53,8 @@ class UserState {
     this.noonTime,
     this.eveningTime,
     this.nightTime,
+    this.hasLostStreak = false,
+    this.lostStreakCount = 0,
   });
 
   UserState copyWith({
@@ -67,6 +73,8 @@ class UserState {
     String? noonTime,
     String? eveningTime,
     String? nightTime,
+    bool? hasLostStreak,
+    int? lostStreakCount,
   }) {
     return UserState(
       name: name ?? this.name,
@@ -84,6 +92,8 @@ class UserState {
       noonTime: noonTime ?? this.noonTime,
       eveningTime: eveningTime ?? this.eveningTime,
       nightTime: nightTime ?? this.nightTime,
+      hasLostStreak: hasLostStreak ?? this.hasLostStreak,
+      lostStreakCount: lostStreakCount ?? this.lostStreakCount,
     );
   }
 }
@@ -186,51 +196,73 @@ class UserStateNotifier extends StateNotifier<UserState> {
   }
 
   Future<void> incrementStreak() async {
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final nextStreak = state.streak + 1;
     await _prefs.setInt('aura_streak', nextStreak);
+    await _prefs.setString('last_streak_date', todayStr);
     state = state.copyWith(streak: nextStreak);
+    
+    try {
+      final firestoreService = FirestoreService();
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await firestoreService.updateUser(user.uid, {
+          'current_streak': nextStreak,
+          'last_streak_date': todayStr,
+        });
+      }
+    } catch (_) {}
   }
 
-  /// Called on app open. Checks last open date from Firestore:
-  /// - Same day → no change
-  /// - Yesterday → increment streak
-  /// - Older or first time → reset to 0
+  /// Called on app open. Checks last streak increment date.
+  /// - If missed a day (last_streak_date > yesterday), flags hasLostStreak to true.
+  /// - Does NOT increment streak automatically.
   Future<void> checkAndUpdateStreak(String userId) async {
     try {
       final firestoreService = FirestoreService();
       final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      final yesterdayStr = DateFormat('yyyy-MM-dd').format(
-        DateTime.now().subtract(const Duration(days: 1))
-      );
-
+      
       final userData = await firestoreService.getUserData(userId);
-      final lastOpenDate = userData?['last_open_date'] as String? ?? '';
-      final savedStreak = (userData?['current_streak'] as num?)?.toInt() ?? 0;
+      final lastStreakDate = userData?['last_streak_date'] as String? ?? _prefs.getString('last_streak_date') ?? '';
+      final savedStreak = (userData?['current_streak'] as num?)?.toInt() ?? _prefs.getInt('aura_streak') ?? 0;
 
-      int newStreak;
-      if (lastOpenDate == todayStr) {
-        // Already opened today, no change needed
-        newStreak = savedStreak.clamp(1, 99999);
-      } else if (lastOpenDate == yesterdayStr) {
-        // Opened yesterday — streak continues
-        newStreak = savedStreak + 1;
-      } else {
-        // Missed at least one day or first open — reset to 1
-        newStreak = 1;
+      // Sync state with firestore if needed
+      if (savedStreak != state.streak) {
+        await _prefs.setInt('aura_streak', savedStreak);
+        state = state.copyWith(streak: savedStreak);
       }
 
-      // Save to Firestore
-      await firestoreService.updateUser(userId, {
-        'current_streak': newStreak,
-        'last_open_date': todayStr,
-      });
+      if (lastStreakDate.isNotEmpty && savedStreak > 0) {
+        final lastDate = DateFormat('yyyy-MM-dd').parse(lastStreakDate);
+        final today = DateFormat('yyyy-MM-dd').parse(todayStr);
+        final diffDays = today.difference(lastDate).inDays;
 
-      // Save locally
-      await _prefs.setInt('aura_streak', newStreak);
-      state = state.copyWith(streak: newStreak);
+        if (diffDays > 1) {
+          // Missed a day! Set flag to show Downgrade Dialog
+          state = state.copyWith(
+            hasLostStreak: true,
+            lostStreakCount: savedStreak,
+          );
+        }
+      }
     } catch (e) {
       debugPrint('checkAndUpdateStreak error: $e');
     }
+  }
+
+  Future<void> acknowledgeLostStreak() async {
+    await _prefs.setInt('aura_streak', 0);
+    state = state.copyWith(streak: 0, hasLostStreak: false, lostStreakCount: 0);
+
+    try {
+      final firestoreService = FirestoreService();
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await firestoreService.updateUser(user.uid, {
+          'current_streak': 0,
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> setStreak(int streak) async {

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -83,10 +84,16 @@ class SyncService {
 
         // Upload local image if backup is enabled and URL is a local path
         String? finalImageUrl = row['image_url'] as String?;
-        if (imageBackupEnabled && finalImageUrl != null && finalImageUrl.isNotEmpty) {
-          final isNetwork = finalImageUrl.startsWith('http://') || finalImageUrl.startsWith('https://');
+        if (imageBackupEnabled &&
+            finalImageUrl != null &&
+            finalImageUrl.isNotEmpty) {
+          final isNetwork =
+              finalImageUrl.startsWith('http://') ||
+              finalImageUrl.startsWith('https://');
           if (!isNetwork) {
-            debugPrint('SyncService: uploading local image path $finalImageUrl for scan $scanId...');
+            debugPrint(
+              'SyncService: uploading local image path $finalImageUrl for scan $scanId...',
+            );
             final cloudUrl = await uploadImage(finalImageUrl, user.uid, scanId);
             if (cloudUrl != null) {
               finalImageUrl = cloudUrl;
@@ -97,49 +104,76 @@ class SyncService {
 
         try {
           if (fullData != null) {
-            final now   = DateTime.parse(row['date'] as String);
+            final now = DateTime.parse(row['date'] as String);
             final score = (row['aura_score'] as num).toDouble();
 
             await _remote.saveScanRecord(
-              userId:             user.uid,
-              scanId:             scanId,
-              scanDate:           now,
-              overallScore:       GeminiService.safeDouble(fullData['overall_score'], score),
-              auraScore:          GeminiService.safeDouble(fullData['aura_score'], score / 10),
-              symmetryScore:      GeminiService.safeDouble(fullData['symmetry_score'], (row['jawline_score'] as num).toDouble()),
-              goldenRatioScore:   GeminiService.safeDouble(fullData['golden_ratio_score'], 65.0),
-              cutenessScore:      GeminiService.safeDouble(fullData['cuteness_score'], 65.0),
-              hotnessScore:       GeminiService.safeDouble(fullData['hotness_score'], 65.0),
-              dominationScore:    GeminiService.safeDouble(fullData['domination_score'], 65.0),
-              postureScore:       (row['posture_score'] as num).toDouble(),
-              rating:             row['rating'] as String,
-              jawlineDetails:     GeminiService.safeMap(fullData['jawline_details']),
-              cheekboneDetails:   GeminiService.safeMap(fullData['cheekbone_details']),
-              eyeDetails:         GeminiService.safeMap(fullData['eye_details']),
-              noseDetails:        GeminiService.safeMap(fullData['nose_details']),
-              lipDetails:         GeminiService.safeMap(fullData['lip_details']),
-              chinDetails:        GeminiService.safeMap(fullData['chin_details']),
-              skinDetails:        GeminiService.safeMap(fullData['skin_details']),
-              highlights:         GeminiService.safeStringList(fullData['highlights']),
-              suggestions:        GeminiService.safeStringList(fullData['suggestions']),
-              imageUrl:           imageBackupEnabled ? finalImageUrl : null,
-              weekIndex:          weekIndex,
+              userId: user.uid,
+              scanId: scanId,
+              scanDate: now,
+              overallScore: GeminiService.safeDouble(
+                fullData['overall_score'],
+                score,
+              ),
+              auraScore: GeminiService.safeDouble(
+                fullData['aura_score'],
+                score / 10,
+              ),
+              symmetryScore: GeminiService.safeDouble(
+                fullData['symmetry_score'],
+                (row['jawline_score'] as num).toDouble(),
+              ),
+              goldenRatioScore: GeminiService.safeDouble(
+                fullData['golden_ratio_score'],
+                65.0,
+              ),
+              cutenessScore: GeminiService.safeDouble(
+                fullData['cuteness_score'],
+                65.0,
+              ),
+              hotnessScore: GeminiService.safeDouble(
+                fullData['hotness_score'],
+                65.0,
+              ),
+              dominationScore: GeminiService.safeDouble(
+                fullData['domination_score'],
+                65.0,
+              ),
+              postureScore: (row['posture_score'] as num).toDouble(),
+              rating: row['rating'] as String,
+              jawlineDetails: GeminiService.safeMap(
+                fullData['jawline_details'],
+              ),
+              cheekboneDetails: GeminiService.safeMap(
+                fullData['cheekbone_details'],
+              ),
+              eyeDetails: GeminiService.safeMap(fullData['eye_details']),
+              noseDetails: GeminiService.safeMap(fullData['nose_details']),
+              lipDetails: GeminiService.safeMap(fullData['lip_details']),
+              chinDetails: GeminiService.safeMap(fullData['chin_details']),
+              skinDetails: GeminiService.safeMap(fullData['skin_details']),
+              highlights: GeminiService.safeStringList(fullData['highlights']),
+              suggestions: GeminiService.safeStringList(
+                fullData['suggestions'],
+              ),
+              imageUrl: imageBackupEnabled ? finalImageUrl : null,
+              weekIndex: weekIndex,
               imageBackupEnabled: imageBackupEnabled,
             );
           } else {
             await _remote.saveScanSummary(
-              userId:             user.uid,
-              scanId:             scanId,
-              scanDate:           DateTime.parse(row['date'] as String),
-              auraScore:          (row['aura_score'] as num).toDouble(),
-              jawlineScore:       (row['jawline_score'] as num).toDouble(),
-              skinScore:          (row['skin_score'] as num).toDouble(),
-              eyeScore:           (row['eye_score'] as num).toDouble(),
-              postureScore:       (row['posture_score'] as num).toDouble(),
-              rating:             row['rating'] as String,
-              highlights:         LocalDbService.parseHighlights(row['highlights']),
-              imageUrl:           imageBackupEnabled ? finalImageUrl : null,
-              weekIndex:          weekIndex,
+              userId: user.uid,
+              scanId: scanId,
+              scanDate: DateTime.parse(row['date'] as String),
+              auraScore: (row['aura_score'] as num).toDouble(),
+              jawlineScore: (row['jawline_score'] as num).toDouble(),
+              skinScore: (row['skin_score'] as num).toDouble(),
+              eyeScore: (row['eye_score'] as num).toDouble(),
+              postureScore: (row['posture_score'] as num).toDouble(),
+              rating: row['rating'] as String,
+              highlights: LocalDbService.parseHighlights(row['highlights']),
+              imageUrl: imageBackupEnabled ? finalImageUrl : null,
+              weekIndex: weekIndex,
               imageBackupEnabled: imageBackupEnabled,
             );
           }
@@ -153,6 +187,10 @@ class SyncService {
     } catch (e) {
       debugPrint('SyncService.syncPendingScans error: $e');
     }
+
+    // Sync outfit and hairstyle records as well
+    await syncOutfitHistory();
+    await syncHairStyleHistory();
   }
 
   // ── PULL: Firestore → local ──────────────────────────────────────────────────
@@ -177,54 +215,61 @@ class SyncService {
         if (alreadyExists) continue;
 
         try {
-          final date        = _parseDate(doc['scan_date']);
-          final auraScore   = GeminiService.safeDouble(doc['aura_score'], 6.5) * 10;
-          final jawline     = GeminiService.safeDouble(doc['symmetry_score'], 65.0);
+          final date = _parseDate(doc['scan_date']);
+          final auraScore =
+              GeminiService.safeDouble(doc['aura_score'], 6.5) * 10;
+          final jawline = GeminiService.safeDouble(doc['symmetry_score'], 65.0);
           final skinDetails = GeminiService.safeMap(doc['skin_details']);
-          final eyeDetails  = GeminiService.safeMap(doc['eye_details']);
-          final skin        = GeminiService.safeDouble(skinDetails['texture'], 65.0);
-          final eye         = GeminiService.safeDouble(eyeDetails['alertness'], 65.0);
-          final posture     = GeminiService.safeDouble(doc['posture_score'], 65.0);
-          final rating      = GeminiService.safeString(doc['rating'], ScanRecord.computeRating(auraScore));
-          final highlights  = GeminiService.safeStringList(doc['highlights']);
-          final weekIndex   = (doc['week_index'] as int?) ?? 0;
+          final eyeDetails = GeminiService.safeMap(doc['eye_details']);
+          final skin = GeminiService.safeDouble(skinDetails['texture'], 65.0);
+          final eye = GeminiService.safeDouble(eyeDetails['alertness'], 65.0);
+          final posture = GeminiService.safeDouble(doc['posture_score'], 65.0);
+          final rating = GeminiService.safeString(
+            doc['rating'],
+            ScanRecord.computeRating(auraScore),
+          );
+          final highlights = GeminiService.safeStringList(doc['highlights']);
+          final weekIndex = (doc['week_index'] as int?) ?? 0;
           // Only restore image URL if it was backed up
           final imageBackedUp = doc['image_backup_enabled'] as bool? ?? true;
-          final rawImageUrl   = doc['image_url'] as String?;
-          final imageUrl      = imageBackedUp && rawImageUrl != null && rawImageUrl.isNotEmpty
+          final rawImageUrl = doc['image_url'] as String?;
+          final imageUrl =
+              imageBackedUp && rawImageUrl != null && rawImageUrl.isNotEmpty
               ? rawImageUrl
               : null;
 
           await _local.insertScan(
-            id:           scanId,
-            userId:       user.uid,
-            date:         date,
-            auraScore:    auraScore,
+            id: scanId,
+            userId: user.uid,
+            date: date,
+            auraScore: auraScore,
             jawlineScore: jawline,
-            skinScore:    skin,
-            eyeScore:     eye,
+            skinScore: skin,
+            eyeScore: eye,
             postureScore: posture,
-            rating:       rating,
-            highlights:   highlights,
-            imageUrl:     imageUrl,
-            weekIndex:    weekIndex,
-            isSynced:     true,
+            rating: rating,
+            highlights: highlights,
+            imageUrl: imageUrl,
+            weekIndex: weekIndex,
+            isSynced: true,
           );
 
-          imported.add(ScanRecord(
-            id:           scanId,
-            date:         date,
-            auraScore:    auraScore,
-            jawlineScore: jawline,
-            skinScore:    skin,
-            eyeScore:     eye,
-            postureScore: posture,
-            rating:       rating,
-            highlights:   highlights,
-            imageUrl:     imageUrl,
-            weekIndex:    weekIndex,
-            isSynced:     true,
-          ));
+          imported.add(
+            ScanRecord(
+              id: scanId,
+              date: date,
+              auraScore: auraScore,
+              jawlineScore: jawline,
+              skinScore: skin,
+              eyeScore: eye,
+              postureScore: posture,
+              rating: rating,
+              highlights: highlights,
+              imageUrl: imageUrl,
+              weekIndex: weekIndex,
+              isSynced: true,
+            ),
+          );
 
           debugPrint('SyncService: imported scan $scanId (week=$weekIndex) ✓');
         } catch (e) {
@@ -242,13 +287,14 @@ class SyncService {
   Future<List<Map<String, dynamic>>> fetchRemoteDailyProgress() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return [];
-    
+
     try {
       final db = FirebaseFirestore.instance;
-      final snapshot = await db.collection('daily_progress')
+      final snapshot = await db
+          .collection('daily_progress')
           .where('user_id', isEqualTo: user.uid)
           .get();
-      
+
       return snapshot.docs.map((d) => d.data()).toList();
     } catch (e) {
       debugPrint('SyncService.fetchRemoteDailyProgress error: $e');
@@ -260,11 +306,18 @@ class SyncService {
 
   /// Sequential week index: position of this scan among all scans (oldest = 1).
   /// Helper to upload a local image to Firebase Storage (compressed format).
-  Future<String?> uploadImage(String imagePath, String userId, String scanId) async {
+  Future<String?> uploadImage(
+    String imagePath,
+    String userId,
+    String scanId, {
+    String folder = 'scan_images',
+  }) async {
     try {
       final file = File(imagePath);
       if (!file.existsSync()) {
-        debugPrint('SyncService: Local image file does not exist at $imagePath');
+        debugPrint(
+          'SyncService: Local image file does not exist at $imagePath',
+        );
         return null;
       }
 
@@ -282,14 +335,16 @@ class SyncService {
       );
 
       if (compressed == null) {
-        debugPrint('SyncService: image compression returned null, using original');
+        debugPrint(
+          'SyncService: image compression returned null, using original',
+        );
         return null;
       }
 
       // Upload to Firebase Storage
       final storageRef = FirebaseStorage.instance
           .ref()
-          .child('scan_images')
+          .child(folder)
           .child(userId)
           .child('$scanId.webp');
 
@@ -305,6 +360,141 @@ class SyncService {
     } catch (e) {
       debugPrint('SyncService.uploadImage error (non-fatal): $e');
       return null;
+    }
+  }
+
+  /// Helper to upload a base64 generated image to Firebase Storage.
+  Future<String?> uploadBase64Image(String base64String, String userId, String scanId, String folder) async {
+    try {
+      final tmpDir = await getTemporaryDirectory();
+      final targetPath = '${tmpDir.path}/${scanId}_$folder.webp';
+      final file = File(targetPath);
+      await file.writeAsBytes(base64Decode(base64String));
+
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child(folder)
+          .child(userId)
+          .child('${scanId}_generated.webp');
+
+      final uploadTask = storageRef.putFile(
+        file,
+        SettableMetadata(contentType: 'image/webp'),
+      );
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      return downloadUrl;
+    } catch(e) {
+      debugPrint('SyncService.uploadBase64Image error: $e');
+      return null;
+    }
+  }
+
+  // ── OUTFIT & HAIRSTYLE SYNC ──────────────────────────────────────────────────
+
+  Future<void> syncOutfitHistory() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final imageBackupEnabled = BackupPreferenceService().isBackupEnabled;
+
+    try {
+      final pending = await _local.getUnsyncedOutfitScans(user.uid);
+      if (pending.isEmpty) return;
+
+      for (final row in pending) {
+        final scanId = row['id'] as String;
+        final fullData = LocalDbService.parseFullData(row['full_data']);
+        
+        String? finalImageUrl = row['image_path'] as String?;
+        if (imageBackupEnabled && finalImageUrl != null && finalImageUrl.isNotEmpty) {
+          final isNetwork = finalImageUrl.startsWith('http://') || finalImageUrl.startsWith('https://');
+          if (!isNetwork) {
+            final cloudUrl = await uploadImage(finalImageUrl, user.uid, scanId, folder: 'outfit_images');
+            if (cloudUrl != null) {
+              finalImageUrl = cloudUrl;
+              await _local.updateOutfitImagePath(scanId, cloudUrl);
+            }
+          }
+        }
+
+        try {
+          await _remote.saveOutfitRecord(
+            userId: user.uid,
+            id: scanId,
+            date: DateTime.parse(row['date'] as String),
+            imageUrl: imageBackupEnabled ? finalImageUrl : null,
+            fullData: fullData ?? {},
+          );
+          await _local.markOutfitSynced(scanId);
+          debugPrint('SyncService: synced outfit $scanId ✓');
+        } catch (e) {
+          debugPrint('SyncService: failed to sync outfit $scanId: $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('SyncService.syncOutfitHistory error: $e');
+    }
+  }
+
+  Future<void> syncHairStyleHistory() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final imageBackupEnabled = BackupPreferenceService().isBackupEnabled;
+
+    try {
+      final pending = await _local.getUnsyncedHairStyleScans(user.uid);
+      if (pending.isEmpty) return;
+
+      for (final row in pending) {
+        final scanId = row['id'] as String;
+        final fullData = LocalDbService.parseFullData(row['full_data']) ?? {};
+        
+        String? finalImageUrl = row['image_path'] as String?;
+        if (imageBackupEnabled && finalImageUrl != null && finalImageUrl.isNotEmpty) {
+          final isNetwork = finalImageUrl.startsWith('http://') || finalImageUrl.startsWith('https://');
+          if (!isNetwork) {
+            final cloudUrl = await uploadImage(finalImageUrl, user.uid, scanId, folder: 'hairstyle_images');
+            if (cloudUrl != null) {
+              finalImageUrl = cloudUrl;
+              await _local.updateHairStyleImagePath(scanId, cloudUrl);
+            }
+          }
+        }
+
+        String? finalGeneratedUrl;
+        if (imageBackupEnabled && fullData['mode'] == 'image' && fullData['image_result'] != null) {
+          final imageResult = fullData['image_result'] as String;
+          if (!imageResult.startsWith('http://') && !imageResult.startsWith('https://')) {
+             final cloudUrl = await uploadBase64Image(imageResult, user.uid, scanId, 'hairstyle_images');
+             if (cloudUrl != null) {
+               finalGeneratedUrl = cloudUrl;
+               // Store remote URL in fullData so it's not redownloaded next time
+               fullData['image_result'] = cloudUrl;
+             }
+          } else {
+             finalGeneratedUrl = imageResult;
+          }
+        }
+
+        try {
+          await _remote.saveHairStyleRecord(
+            userId: user.uid,
+            id: scanId,
+            date: DateTime.parse(row['date'] as String),
+            imageUrl: imageBackupEnabled ? finalImageUrl : null,
+            fullData: fullData,
+            generatedImageUrl: imageBackupEnabled ? finalGeneratedUrl : null,
+          );
+          await _local.markHairStyleSynced(scanId);
+          debugPrint('SyncService: synced hairstyle $scanId ✓');
+        } catch (e) {
+          debugPrint('SyncService: failed to sync hairstyle $scanId: $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('SyncService.syncHairStyleHistory error: $e');
     }
   }
 

@@ -36,7 +36,7 @@ class _AuthGateState extends ConsumerState<AuthGate>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
-    
+
     _pulseAnimation = CurvedAnimation(
       parent: _pulseController,
       curve: Curves.easeInOut,
@@ -112,7 +112,8 @@ class _AuthGateState extends ConsumerState<AuthGate>
               'subscription_category': 'Gift',
               'custom_sub_start_date': Timestamp.now(),
               'custom_sub_end_date': Timestamp.fromDate(
-                  DateTime.now().add(const Duration(days: 365))),
+                DateTime.now().add(const Duration(days: 365)),
+              ),
             }, SetOptions(merge: true));
           }
         } catch (e) {
@@ -129,11 +130,16 @@ class _AuthGateState extends ConsumerState<AuthGate>
         if (fsName.isNotEmpty && fsGender.isNotEmpty) {
           // Existing user with basic profile info: sync basic info and send straight to goals/problems selection
           final int fsAge = data['age'] ?? 18;
-          final double fsAuraScore = (data['aura_score'] as num?)?.toDouble() ?? 0.0;
+          final double fsAuraScore =
+              (data['aura_score'] as num?)?.toDouble() ?? 0.0;
           final String fsCoachLanguage = data['coach_language'] ?? 'English';
-          
+
           final userNotifier = ref.read(userStateProvider.notifier);
-          await userNotifier.updateProfile(name: fsName, age: fsAge, gender: fsGender);
+          await userNotifier.updateProfile(
+            name: fsName,
+            age: fsAge,
+            gender: fsGender,
+          );
           await userNotifier.updateAuraScore(fsAuraScore);
           await userNotifier.updateLanguage(fsCoachLanguage);
 
@@ -141,7 +147,9 @@ class _AuthGateState extends ConsumerState<AuthGate>
           return;
         }
 
-        if (mounted) Navigator.of(context).pushReplacementNamed('/profile-setup');
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/profile-setup');
+        }
         return;
       }
 
@@ -163,9 +171,15 @@ class _AuthGateState extends ConsumerState<AuthGate>
 
       final userNotifier = ref.read(userStateProvider.notifier);
       await userNotifier.updateProfile(
-          name: fsName, age: fsAge, gender: fsGender);
+        name: fsName,
+        age: fsAge,
+        gender: fsGender,
+      );
       await userNotifier.updateGoals(fsGoals);
-      await userNotifier.updateLifestyle(skinType: fsSkinType, budget: fsBudget);
+      await userNotifier.updateLifestyle(
+        skinType: fsSkinType,
+        budget: fsBudget,
+      );
       await userNotifier.completeOnboarding();
       await userNotifier.updateAuraScore(fsAuraScore);
       await userNotifier.updateLanguage(fsCoachLanguage);
@@ -184,12 +198,14 @@ class _AuthGateState extends ConsumerState<AuthGate>
         final rawProgress = await SyncService().fetchRemoteDailyProgress();
         if (rawProgress.isNotEmpty) {
           final mapped = rawProgress
-              .map((d) => DailyProgress(
-                    dateKey: d['date_key'] ?? '',
-                    date: DateTime.parse(d['date_key']),
-                    completed: d['completed_count'] ?? 0,
-                    total: d['total_count'] ?? 9,
-                  ))
+              .map(
+                (d) => DailyProgress(
+                  dateKey: d['date_key'] ?? '',
+                  date: DateTime.parse(d['date_key']),
+                  completed: d['completed_count'] ?? 0,
+                  total: d['total_count'] ?? 9,
+                ),
+              )
               .toList();
           await ref
               .read(dailyProgressProvider.notifier)
@@ -201,7 +217,9 @@ class _AuthGateState extends ConsumerState<AuthGate>
 
       // ── Backup consent not shown → consent screen ──────────────────────────
       if (!BackupPreferenceService().hasShownConsent) {
-        if (mounted) Navigator.of(context).pushReplacementNamed('/backup-consent');
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/backup-consent');
+        }
         return;
       }
 
@@ -216,8 +234,10 @@ class _AuthGateState extends ConsumerState<AuthGate>
       if (!isPro) {
         // Check custom subscription override from Firestore
         try {
-          final subDoc =
-              await db.collection('subscription').doc(user.uid).get();
+          final subDoc = await db
+              .collection('subscription')
+              .doc(user.uid)
+              .get();
           if (subDoc.exists) {
             final subData = subDoc.data() as Map<String, dynamic>;
             final bool hasCustomSub = subData['custom_subscription'] ?? false;
@@ -230,15 +250,18 @@ class _AuthGateState extends ConsumerState<AuthGate>
                   debugPrint('Custom subscription valid → isPro = true');
                 } else {
                   debugPrint(
-                      'Custom subscription expired on ${endDateRaw.toDate()}');
+                    'Custom subscription expired on ${endDateRaw.toDate()}',
+                  );
                   try {
-                    await subDoc.reference
-                        .update({'custom_subscription': false});
+                    await subDoc.reference.update({
+                      'custom_subscription': false,
+                    });
                   } catch (_) {}
                 }
               } else {
                 debugPrint(
-                    'Custom subscription: no valid end date → assumed lifetime/gift');
+                  'Custom subscription: no valid end date → assumed lifetime/gift',
+                );
                 isPro = true;
               }
             }
@@ -254,10 +277,7 @@ class _AuthGateState extends ConsumerState<AuthGate>
         await ref.read(userStateProvider.notifier).setPro(isPro);
         debugPrint('isPro synced: $localIsPro → $isPro');
         try {
-          await db
-              .collection('users')
-              .doc(user.uid)
-              .update({'is_pro': isPro});
+          await db.collection('users').doc(user.uid).update({'is_pro': isPro});
         } catch (e) {
           debugPrint('Firestore isPro sync failed: $e');
         }
@@ -280,15 +300,18 @@ class _AuthGateState extends ConsumerState<AuthGate>
         if (mounted) {
           if (scanList.isNotEmpty) {
             final latestScan = scanList.first;
-            final previousScan =
-                scanList.length > 1 ? scanList[1] : null;
+            final previousScan = scanList.length > 1 ? scanList[1] : null;
             Navigator.of(context).pushReplacementNamed('/dashboard');
             await Future.delayed(const Duration(milliseconds: 150));
             if (mounted) {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) =>
-                    ScanDetailScreen(scan: latestScan, previousScan: previousScan),
-              ));
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ScanDetailScreen(
+                    scan: latestScan,
+                    previousScan: previousScan,
+                  ),
+                ),
+              );
             }
           } else {
             Navigator.of(context).pushReplacementNamed('/dashboard');
@@ -343,9 +366,7 @@ class _AuthGateState extends ConsumerState<AuthGate>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -359,14 +380,20 @@ class _AuthGateState extends ConsumerState<AuthGate>
                     height: 80 + (_pulseAnimation.value * 20),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppTheme.secondary.withAlpha((_pulseAnimation.value * 20).toInt()),
+                      color: AppTheme.secondary.withAlpha(
+                        (_pulseAnimation.value * 20).toInt(),
+                      ),
                       border: Border.all(
-                        color: AppTheme.secondary.withAlpha((100 + _pulseAnimation.value * 100).toInt()),
+                        color: AppTheme.secondary.withAlpha(
+                          (100 + _pulseAnimation.value * 100).toInt(),
+                        ),
                         width: 2,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.secondary.withAlpha((_pulseAnimation.value * 80).toInt()),
+                          color: AppTheme.secondary.withAlpha(
+                            (_pulseAnimation.value * 80).toInt(),
+                          ),
                           blurRadius: 30,
                           spreadRadius: 5,
                         ),
@@ -375,7 +402,9 @@ class _AuthGateState extends ConsumerState<AuthGate>
                     child: Center(
                       child: Icon(
                         Icons.blur_on_rounded,
-                        color: AppTheme.secondary.withAlpha((150 + _pulseAnimation.value * 105).toInt()),
+                        color: AppTheme.secondary.withAlpha(
+                          (150 + _pulseAnimation.value * 105).toInt(),
+                        ),
                         size: 40,
                       ),
                     ),
@@ -400,7 +429,9 @@ class _AuthGateState extends ConsumerState<AuthGate>
                 builder: (context, child) => Text(
                   'Loading your profile securely...',
                   style: GoogleFonts.outfit(
-                    color: Colors.white.withAlpha((100 + _pulseAnimation.value * 100).toInt()),
+                    color: Colors.white.withAlpha(
+                      (100 + _pulseAnimation.value * 100).toInt(),
+                    ),
                     fontSize: 13,
                   ),
                 ),

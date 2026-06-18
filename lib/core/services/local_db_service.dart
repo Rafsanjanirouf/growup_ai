@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -12,8 +13,10 @@ class LocalDbService {
   Database? _db;
 
   static const _dbName    = 'growup_local.db';
-  static const _dbVersion = 6;          // bumped: added user_id to scan_records
+  static const _dbVersion = 10;         // bumped: added is_synced to outfit and hairstyle
   static const _scanTable  = 'scan_records';
+  static const _outfitTable = 'outfit_history';
+  static const _hairStyleTable = 'hairstyle_history';
   static const _configTable = 'app_config';
   static const _chatTable = 'chat_messages';
   static const _chatSessionsTable = 'chat_sessions';
@@ -78,6 +81,49 @@ class LocalDbService {
           // v5 → v6: add user_id column
           await db.execute('ALTER TABLE $_scanTable ADD COLUMN user_id TEXT NOT NULL DEFAULT ""');
         }
+        if (oldVersion < 7) {
+          // v6 → v7: add outfit_history table
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS $_outfitTable (
+              id         TEXT PRIMARY KEY,
+              user_id    TEXT NOT NULL,
+              date       TEXT NOT NULL,
+              image_path TEXT,
+              full_data  TEXT NOT NULL
+            )
+          ''');
+        }
+        if (oldVersion < 8) {
+          // v7 → v8: add hairstyle_history table
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS $_hairStyleTable (
+              id         TEXT PRIMARY KEY,
+              user_id    TEXT NOT NULL,
+              date       TEXT NOT NULL,
+              image_path TEXT,
+              full_data  TEXT NOT NULL,
+              generated_image_b64 TEXT
+            )
+          ''');
+        }
+        if (oldVersion < 9) {
+          // v8 → v9: add generated_image_b64 column to hairstyle_history
+          try {
+            await db.execute('ALTER TABLE $_hairStyleTable ADD COLUMN generated_image_b64 TEXT');
+          } catch (e) {
+            // Ignore if column already exists (in case of fresh install)
+            debugPrint('Error adding column or column already exists: $e');
+          }
+        }
+        if (oldVersion < 10) {
+          // v9 → v10: add is_synced column
+          try {
+            await db.execute('ALTER TABLE $_outfitTable ADD COLUMN is_synced INTEGER NOT NULL DEFAULT 0');
+            await db.execute('ALTER TABLE $_hairStyleTable ADD COLUMN is_synced INTEGER NOT NULL DEFAULT 0');
+          } catch (e) {
+            debugPrint('Error adding is_synced columns: $e');
+          }
+        }
       },
     );
   }
@@ -121,6 +167,27 @@ class LocalDbService {
         id         TEXT PRIMARY KEY,
         title      TEXT NOT NULL,
         updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE $_outfitTable (
+        id         TEXT PRIMARY KEY,
+        user_id    TEXT NOT NULL,
+        date       TEXT NOT NULL,
+        image_path TEXT,
+        full_data  TEXT NOT NULL,
+        is_synced  INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE $_hairStyleTable (
+        id         TEXT PRIMARY KEY,
+        user_id    TEXT NOT NULL,
+        date       TEXT NOT NULL,
+        image_path TEXT,
+        full_data  TEXT NOT NULL,
+        generated_image_b64 TEXT,
+        is_synced  INTEGER NOT NULL DEFAULT 0
       )
     ''');
   }
@@ -187,6 +254,154 @@ class LocalDbService {
       {'image_url': imageUrl},
       where: 'id = ?',
       whereArgs: [scanId],
+    );
+  }
+
+  // ── OUTFIT HISTORY ───────────────────────────────────────────────────────────
+
+  Future<void> insertOutfitScan({
+    required String id,
+    required String userId,
+    required DateTime date,
+    String? imagePath,
+    required Map<String, dynamic> fullData,
+    bool isSynced = false,
+  }) async {
+    final database = await db;
+    await database.insert(
+      _outfitTable,
+      {
+        'id': id,
+        'user_id': userId,
+        'date': date.toIso8601String(),
+        'image_path': imagePath,
+        'full_data': jsonEncode(fullData),
+        'is_synced': isSynced ? 1 : 0,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getAllOutfitScans(String userId) async {
+    final database = await db;
+    return database.query(
+      _outfitTable,
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'date DESC',
+    );
+  }
+
+  Future<void> deleteOutfitScan(String id) async {
+    final database = await db;
+    await database.delete(
+      _outfitTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getUnsyncedOutfitScans(String userId) async {
+    final database = await db;
+    return database.query(
+      _outfitTable,
+      where: 'is_synced = ? AND user_id = ?',
+      whereArgs: [0, userId],
+    );
+  }
+
+  Future<void> markOutfitSynced(String id) async {
+    final database = await db;
+    await database.update(
+      _outfitTable,
+      {'is_synced': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> updateOutfitImagePath(String id, String imagePath) async {
+    final database = await db;
+    await database.update(
+      _outfitTable,
+      {'image_path': imagePath},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // ── HAIRSTYLE HISTORY ───────────────────────────────────────────────────────────
+
+  Future<void> insertHairStyleScan({
+    required String id,
+    required String userId,
+    required DateTime date,
+    String? imagePath,
+    required Map<String, dynamic> fullData,
+    String? generatedImageB64,
+    bool isSynced = false,
+  }) async {
+    final database = await db;
+    await database.insert(
+      _hairStyleTable,
+      {
+        'id': id,
+        'user_id': userId,
+        'date': date.toIso8601String(),
+        'image_path': imagePath,
+        'full_data': jsonEncode(fullData),
+        'generated_image_b64': generatedImageB64,
+        'is_synced': isSynced ? 1 : 0,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getAllHairStyleScans(String userId) async {
+    final database = await db;
+    return database.query(
+      _hairStyleTable,
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'date DESC',
+    );
+  }
+
+  Future<void> deleteHairStyleScan(String id) async {
+    final database = await db;
+    await database.delete(
+      _hairStyleTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getUnsyncedHairStyleScans(String userId) async {
+    final database = await db;
+    return database.query(
+      _hairStyleTable,
+      where: 'is_synced = ? AND user_id = ?',
+      whereArgs: [0, userId],
+    );
+  }
+
+  Future<void> markHairStyleSynced(String id) async {
+    final database = await db;
+    await database.update(
+      _hairStyleTable,
+      {'is_synced': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> updateHairStyleImagePath(String id, String imagePath) async {
+    final database = await db;
+    await database.update(
+      _hairStyleTable,
+      {'image_path': imagePath},
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 

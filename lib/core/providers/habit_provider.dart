@@ -136,7 +136,7 @@ class HabitStateNotifier extends StateNotifier<List<Habit>> {
     rescheduleReminders();
   }
 
-  Future<void> toggleHabit(String id) async {
+  Future<bool> toggleHabit(String id) async {
     state = state.map((habit) {
       if (habit.id == id) {
         if (habit.isCompleted) {
@@ -152,7 +152,7 @@ class HabitStateNotifier extends StateNotifier<List<Habit>> {
     }).toList();
 
     await _saveHabits();
-    _checkAndIncrementStreak();
+    final didIncrement = _checkAndIncrementStreak();
     await _syncToFirestore();
 
     // Snapshot today's completion count
@@ -161,6 +161,8 @@ class HabitStateNotifier extends StateNotifier<List<Habit>> {
       completed: completed,
       total: state.length,
     );
+    
+    return didIncrement;
   }
 
   Future<void> addCustomTask(Habit habit) async {
@@ -298,19 +300,19 @@ class HabitStateNotifier extends StateNotifier<List<Habit>> {
 
   /// Increments streak only once per calendar day.
   /// Triggered when the user completes at least one task.
-  /// Uses SharedPreferences key 'streak_incremented_date' (yyyy-MM-dd) as a guard.
-  void _checkAndIncrementStreak() {
-    if (state.isEmpty) return;
+  /// Uses SharedPreferences key 'last_streak_date' (yyyy-MM-dd) as a guard.
+  bool _checkAndIncrementStreak() {
+    if (state.isEmpty) return false;
     final anyCompleted = state.any((habit) => habit.isCompleted);
-    if (!anyCompleted) return;
+    if (!anyCompleted) return false;
 
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final lastIncrDate = _prefs.getString('streak_incremented_date') ?? '';
-    if (lastIncrDate == today) return; // Already incremented today
+    final lastIncrDate = _prefs.getString('last_streak_date') ?? '';
+    if (lastIncrDate == today) return false; // Already incremented today
 
     // Mark today as done and increment
-    _prefs.setString('streak_incremented_date', today);
     _ref.read(userStateProvider.notifier).incrementStreak();
+    return true;
   }
 }
 

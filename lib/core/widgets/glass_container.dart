@@ -8,6 +8,7 @@ class GlassContainer extends StatelessWidget {
   final double borderRadius;
   final BoxBorder? border;
   final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry? margin;
   final Color? glowColor;
   final double glowRadius;
 
@@ -19,6 +20,7 @@ class GlassContainer extends StatelessWidget {
     this.borderRadius = 24.0,
     this.border,
     this.padding = const EdgeInsets.all(20.0),
+    this.margin,
     this.glowColor,
     this.glowRadius = 30.0,
   });
@@ -26,6 +28,7 @@ class GlassContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      margin: margin,
       decoration: glowColor != null
           ? BoxDecoration(
               boxShadow: [

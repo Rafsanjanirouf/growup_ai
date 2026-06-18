@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
@@ -17,6 +18,8 @@ import '../share/glow_up_share_screen.dart';
 import '../scan/scan_history_screen.dart';
 import 'task_history_screen.dart';
 import 'task_management_screen.dart';
+import '../ai_recommendations/ai_outfit_screen.dart';
+import '../ai_recommendations/ai_hair_style_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -56,6 +59,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<UserState>(userStateProvider, (previous, next) {
+      if (next.hasLostStreak && (previous == null || !previous.hasLostStreak)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showStreakLostDialog(context, next.lostStreakCount);
+        });
+      }
+    });
+
     return Scaffold(
       body: IndexedStack(
         index: _navIndex,
@@ -121,6 +132,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final totalHabits = habits.length;
     final completedHabits = habits.where((h) => h.isCompleted).length;
     final progress = totalHabits > 0 ? completedHabits / totalHabits : 0.0;
+
+    // Define displayAura to always match the latest scan or normalized user score
+    final scans = ref.watch(scanHistoryProvider);
+    final latestScan = scans.isNotEmpty ? scans.first : null;
+    final double rawAura = latestScan != null ? latestScan.auraScore : user.auraScore;
+    final displayAura = rawAura > 10.0 ? rawAura / 10.0 : rawAura;
 
     return Container(
       decoration: const BoxDecoration(
@@ -267,7 +284,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             width: 105,
                             height: 105,
                             child: CircularProgressIndicator(
-                              value: (user.auraScore / 10.0).clamp(0.0, 1.0), // Represents aura score out of 10!
+                              value: (displayAura / 10.0).clamp(0.0, 1.0), // Represents aura score out of 10!
                               strokeWidth: 9,
                               backgroundColor: Colors.white10,
                               color: AppTheme.secondary,
@@ -277,7 +294,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                user.auraScore > 0 ? user.auraScore.toStringAsFixed(1) : '0.0',
+                                displayAura > 0 ? displayAura.toStringAsFixed(1) : '0.0',
                                 style: GoogleFonts.outfit(
                                   fontSize: 26,
                                   fontWeight: FontWeight.w900,
@@ -361,7 +378,46 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+
+            // AI Recommendations Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildAiRecommendationCard(
+                      title: 'AI Outfits',
+                      subtitle: 'Find your style',
+                      imagePath: 'assets/image/t_shirt_icon.png',
+                      gradientColors: [const Color(0xFF6A11CB), const Color(0xFF2575FC)],
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AiOutfitScreen()),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildAiRecommendationCard(
+                      title: 'AI Haircut',
+                      subtitle: 'Perfect cuts',
+                      imagePath: 'assets/image/short_hair_style.png',
+                      gradientColors: [const Color(0xFFFF416C), const Color(0xFFFF4B2B)],
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AiHairStyleScreen()),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
 
             // Segmented Tab Selector (Morning, Noon, Evening, Night)
             Padding(
@@ -449,9 +505,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                                 child: Row(
                                                   children: [
                                                     GestureDetector(
-                                                      onTap: () => ref
-                                                          .read(habitStateProvider.notifier)
-                                                          .toggleHabit(h.id),
+                                                      onTap: () => _handleToggleHabit(h),
                                                       child: AnimatedContainer(
                                                         duration: const Duration(milliseconds: 300),
                                                         width: 30,
@@ -496,39 +550,45 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                                     ),
                                                     const SizedBox(width: 12),
                                                     Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment.start,
-                                                        children: [
-                                                          Text(
-                                                            h.title,
-                                                            style: GoogleFonts.outfit(
-                                                              fontSize: 14,
-                                                              fontWeight: FontWeight.bold,
-                                                              color: h.isCompleted
-                                                                  ? Colors.white54
-                                                                  : Colors.white,
-                                                              decoration: h.isCompleted
-                                                                  ? TextDecoration.lineThrough
-                                                                  : null,
-                                                              decorationColor:
-                                                                  Colors.white38,
-                                                            ),
-                                                          ),
-                                                          if (h.description.isNotEmpty) ...
-                                                            [
-                                                              const SizedBox(height: 2),
+                                                      child: GestureDetector(
+                                                        onTap: () => _showTaskDetailsDialog(context, h),
+                                                        child: Container(
+                                                          color: Colors.transparent,
+                                                          child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment.start,
+                                                            children: [
                                                               Text(
-                                                                h.description,
+                                                                h.title,
                                                                 style: GoogleFonts.outfit(
-                                                                  fontSize: 11,
-                                                                  color: AppTheme.textSecondary,
+                                                                  fontSize: 14,
+                                                                  fontWeight: FontWeight.bold,
+                                                                  color: h.isCompleted
+                                                                      ? Colors.white54
+                                                                      : Colors.white,
+                                                                  decoration: h.isCompleted
+                                                                      ? TextDecoration.lineThrough
+                                                                      : null,
+                                                                  decorationColor:
+                                                                      Colors.white38,
                                                                 ),
-                                                                maxLines: 1,
-                                                                overflow: TextOverflow.ellipsis,
                                                               ),
+                                                              if (h.description.isNotEmpty) ...
+                                                                [
+                                                                  const SizedBox(height: 2),
+                                                                  Text(
+                                                                    h.description,
+                                                                    style: GoogleFonts.outfit(
+                                                                      fontSize: 11,
+                                                                      color: AppTheme.textSecondary,
+                                                                    ),
+                                                                    maxLines: 1,
+                                                                    overflow: TextOverflow.ellipsis,
+                                                                  ),
+                                                                ],
                                                             ],
-                                                        ],
+                                                          ),
+                                                        ),
                                                       ),
                                                     ),
                                                     IconButton(
@@ -1006,6 +1066,465 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showTaskDetailsDialog(BuildContext context, Habit habit) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withAlpha(180),
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: Colors.white10),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primary.withAlpha(30),
+                  blurRadius: 40,
+                  spreadRadius: -10,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header: Icon + Title
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: habit.isCompleted
+                            ? AppTheme.success.withAlpha(30)
+                            : AppTheme.primary.withAlpha(30),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        habit.isCompleted ? Icons.check_circle_rounded : Icons.auto_awesome_rounded,
+                        color: habit.isCompleted ? AppTheme.success : AppTheme.primary,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        habit.title,
+                        style: GoogleFonts.outfit(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                if (habit.description.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    'DETAILS',
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2.0,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    habit.description,
+                    style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      color: Colors.white70,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 24),
+                // Progress
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(5),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'PROGRESS',
+                        style: GoogleFonts.outfit(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2.0,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                      Text(
+                        '${habit.currentCount} / ${habit.targetCount}',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: habit.isCompleted ? AppTheme.success : AppTheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+                
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: Text(
+                          'CLOSE',
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white54,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // Toggle task
+                          _handleToggleHabit(habit);
+                          Navigator.pop(ctx);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: habit.isCompleted ? Colors.white10 : AppTheme.primary,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: Text(
+                          habit.isCompleted ? 'UNDO' : 'DONE',
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: habit.isCompleted ? Colors.white : Colors.black,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAiRecommendationCard({
+    required String title,
+    required String subtitle,
+    required String imagePath,
+    required List<Color> gradientColors,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 110,
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(40),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            children: [
+              // Subtle background glow effect
+              Positioned(
+                right: -30,
+                top: -30,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: gradientColors[1].withAlpha(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: gradientColors[1].withAlpha(20),
+                        blurRadius: 30,
+                        spreadRadius: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: gradientColors,
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: gradientColors[0].withAlpha(80),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 14),
+                        ),
+                        Image.asset(
+                          imagePath,
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.contain,
+                          color: Colors.white,
+                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported, color: Colors.white54),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    Text(
+                      title,
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.outfit(
+                        fontSize: 10,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleToggleHabit(Habit h) async {
+    final didIncrement = await ref.read(habitStateProvider.notifier).toggleHabit(h.id);
+    if (didIncrement && mounted) {
+      HapticFeedback.heavyImpact();
+      _showStreakCongratulationDialog(context);
+    }
+  }
+
+  void _showStreakLostDialog(BuildContext context, int previousStreak) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withAlpha(200),
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppTheme.danger.withAlpha(100), width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.danger.withAlpha(40),
+                  blurRadius: 40,
+                  spreadRadius: -10,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.sentiment_dissatisfied_rounded, color: AppTheme.danger, size: 60),
+                const SizedBox(height: 16),
+                Text(
+                  'Streak Lost!',
+                  style: GoogleFonts.cinzel(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Oh no! You missed a day. Your $previousStreak day streak has been reset. Let\'s start fresh!',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    color: Colors.white70,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      ref.read(userStateProvider.notifier).acknowledgeLostStreak();
+                      Navigator.pop(ctx);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: AppTheme.danger,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Text(
+                      'START FROM 0',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showStreakCongratulationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withAlpha(200),
+      builder: (ctx) {
+        final streak = ref.watch(userStateProvider).streak;
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppTheme.success.withAlpha(100), width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.success.withAlpha(60),
+                  blurRadius: 60,
+                  spreadRadius: -10,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppTheme.success.withAlpha(20),
+                  ),
+                  child: Icon(Icons.local_fire_department_rounded, color: AppTheme.success, size: 60),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Streak Increased!',
+                  style: GoogleFonts.cinzel(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'You are on fire! You have hit a $streak day streak. Keep pushing towards your goals.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    color: Colors.white70,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: AppTheme.success,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Text(
+                      'AWESOME',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -12,7 +12,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/services/local_db_service.dart';
 import '../../core/services/firestore_service.dart';
 import '../../core/services/gemini_service.dart';
-import '../../core/config/app_languages.dart';
+import '../../core/widgets/language_picker_sheet.dart';
 import 'chat_history_screen.dart';
 
 class ChatMessage {
@@ -169,7 +169,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
     await _flutterTts.speak(cleanText);
   }
 
-  void _startNewChat() {
+  void _startNewChat() async {
     setState(() {
       _currentSessionId = null;
       _messages.clear();
@@ -182,6 +182,41 @@ class _AICoachScreenState extends State<AICoachScreen> {
         ),
       );
     });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final scans = await LocalDbService().getAllScans(user.uid);
+        if (scans.isNotEmpty) {
+          final latest = scans.first;
+          final auraScore = (latest['aura_score'] as num).toDouble().toStringAsFixed(1);
+          final skinScore = (latest['skin_score'] as num).toDouble().toStringAsFixed(1);
+          final jawlineScore = (latest['jawline_score'] as num).toDouble().toStringAsFixed(1);
+          final rating = latest['rating'] as String? ?? 'Developing';
+
+          final reportText = "Here is a quick look at your latest analysis:\n\n"
+              "**Aura Score**: $auraScore ($rating)\n"
+              "**Skin Score**: $skinScore\n"
+              "**Jawline Score**: $jawlineScore\n\n"
+              "Would you like me to analyze this further or give you personalized tips to improve these scores?";
+
+          if (mounted) {
+            setState(() {
+              _messages.add(
+                ChatMessage(
+                  id: const Uuid().v4(),
+                  text: reportText,
+                  isUser: false,
+                  timestamp: DateTime.now().add(const Duration(seconds: 1)),
+                ),
+              );
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching latest scan for chat: $e");
+    }
   }
 
   void _showSettingsSheet() {
@@ -298,7 +333,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
                           isDismissible: true,
                           enableDrag: true,
                           isScrollControlled: true,
-                          builder: (ctx) => _CoachLanguagePickerSheet(
+                          builder: (ctx) => LanguagePickerSheet(
                             selectedLanguage: _selectedLanguage,
                           ),
                         );
@@ -363,8 +398,31 @@ class _AICoachScreenState extends State<AICoachScreen> {
   }
 
   void _sendMessage() async {
+    if (_isTyping) return;
+
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
+
+    // Check Token Limit before sending
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final dateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final usedTokens = await FirestoreService().getDailyTokenUsage(userId: user.uid, dateKey: dateKey);
+      final limit = await FirestoreService().getDailyTokenLimit();
+      
+      if (usedTokens >= limit) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Daily AI limit reached! ($limit tokens). Please try again tomorrow.', style: GoogleFonts.outfit()),
+              backgroundColor: Colors.redAccent,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
+    }
 
     _messageController.clear();
     
@@ -847,7 +905,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
   }
 
   Widget _buildSuggestionsChips() {
-    final suggestions = ['How to Mew? 📐', 'Acne Treatment? 🧼', 'Chewing Gum? 🦷', 'Posture Tip? 🧍'];
+    final suggestions = ['Analyze my latest report 📊', 'How to Mew? 📐', 'Acne Treatment? 🧼', 'Chewing Gum? 🦷', 'Posture Tip? 🧍'];
     return SizedBox(
       height: 38,
       child: ListView.builder(
@@ -877,188 +935,3 @@ class _AICoachScreenState extends State<AICoachScreen> {
   }
 }
 
-class _CoachLanguagePickerSheet extends StatefulWidget {
-  final String selectedLanguage;
-  const _CoachLanguagePickerSheet({required this.selectedLanguage});
-
-  @override
-  State<_CoachLanguagePickerSheet> createState() =>
-      _CoachLanguagePickerSheetState();
-}
-
-class _CoachLanguagePickerSheetState
-    extends State<_CoachLanguagePickerSheet> {
-  late String _selected;
-
-  @override
-  void initState() {
-    super.initState();
-    _selected = widget.selectedLanguage;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: AppTheme.backgroundGradient,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Handle bar
-          Center(
-            child: Container(
-              width: 44,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          // Header
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.secondary.withAlpha(30),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppTheme.secondary.withAlpha(60)),
-                ),
-                child: const Icon(Icons.translate_rounded,
-                    color: AppTheme.secondary, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Coach Language',
-                    style: GoogleFonts.outfit(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                    ),
-                  ),
-                  Text(
-                    'AURA AI speaking language',
-                    style: GoogleFonts.outfit(
-                        fontSize: 12, color: AppTheme.textSecondary),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          // Language Grid
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: AppLanguages.all.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 2.7,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-            ),
-            itemBuilder: (context, index) {
-              final lang = AppLanguages.all[index];
-              final isSelected = _selected == lang['name'];
-              return GestureDetector(
-                onTap: () => setState(() => _selected = lang['name']!),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppTheme.secondary.withAlpha(35)
-                        : Colors.white.withAlpha(8),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppTheme.secondary
-                          : Colors.white.withAlpha(20),
-                      width: isSelected ? 1.5 : 1.0,
-                    ),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: AppTheme.secondary.withAlpha(40),
-                              blurRadius: 8,
-                              spreadRadius: 1,
-                            )
-                          ]
-                        : [],
-                  ),
-                  child: Row(
-                    children: [
-                      Text(lang['flag']!, style: const TextStyle(fontSize: 20)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              lang['name']!,
-                              style: GoogleFonts.outfit(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: isSelected ? AppTheme.secondary : Colors.white,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              lang['native']!,
-                              style: GoogleFonts.outfit(
-                                  fontSize: 10, color: Colors.white38),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (isSelected)
-                        const Icon(Icons.check_circle_rounded,
-                            color: AppTheme.secondary, size: 16),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 32),
-          // Save Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => Navigator.pop(context, _selected),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 4,
-                shadowColor: AppTheme.primary.withAlpha(100),
-              ),
-              child: Text(
-                'Select Language',
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

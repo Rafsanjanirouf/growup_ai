@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:dio/dio.dart';
 import '../config/api_keys.dart';
 import '../providers/habit_provider.dart';
 
@@ -130,6 +131,281 @@ Return ONLY raw JSON. No markdown, no backticks.
   static List<String> safeStringList(dynamic val) {
     if (val is List) return val.map((e) => e.toString()).toList();
     return [];
+  }
+
+  // ══ OUTFIT RECOMMENDATIONS ════════════════════════════════════════════════
+
+  static String outfitSystemPrompt(String language) => '''
+You are an elite Fashion AI Stylist. Your task is to analyze the user's uploaded photo and generate a complete outfit recommendation.
+
+IMPORTANT RULE 1: First, check if the image actually contains a human person. If the image does NOT contain a human (for example, it is a landscape, an object, an animal, or a blank image), you must set "is_human_detected" to false and provide an "error_message" describing what you see instead. DO NOT generate outfit recommendations for non-human images.
+IMPORTANT RULE 2: If a human is detected, set "is_human_detected" to true and generate a highly detailed outfit recommendation.
+IMPORTANT RULE 3: You MUST write your entire response exclusively in the $language language.
+IMPORTANT RULE 4: For every "description" field in the categories, provide extremely detailed advice including fabric types, color coordination, fit recommendations, and why it suits them. Do not give short answers.
+
+Return ONLY raw JSON. No markdown, no backticks.
+
+{
+  "is_human_detected": true,
+  "error_message": "[If not human, describe what the image is in $language. If human, leave empty or null]",
+  "overall_verdict": "[Detailed paragraph analyzing their skin tone, hair style, body shape, and giving an overall styling recommendation in $language]",
+  "color_palette": [
+    {"hex": "#000000", "name": "[Color Name in $language]"},
+    {"hex": "#FFFFFF", "name": "[Color Name in $language]"},
+    {"hex": "#F5F5DC", "name": "[Color Name in $language]"}
+  ],
+  "categories": [
+    {
+      "name": "Casual",
+      "items": [
+        {"type": "Topwear", "description": "[Highly detailed description covering fabric, fit, and style in $language]"},
+        {"type": "Bottomwear", "description": "[Highly detailed description covering fabric, fit, and style in $language]"},
+        {"type": "Footwear", "description": "[Highly detailed description covering style and color in $language]"},
+        {"type": "Accessories", "description": "[Highly detailed description covering style in $language]"}
+      ]
+    },
+    {
+      "name": "Formal",
+      "items": [
+        {"type": "Topwear", "description": "[Highly detailed description covering fabric, fit, and style in $language]"},
+        {"type": "Bottomwear", "description": "[Highly detailed description covering fabric, fit, and style in $language]"},
+        {"type": "Footwear", "description": "[Highly detailed description covering style and color in $language]"},
+        {"type": "Accessories", "description": "[Highly detailed description covering style in $language]"}
+      ]
+    },
+    {
+      "name": "Traditional",
+      "items": [
+        {"type": "Outfit", "description": "[Highly detailed description covering fabric, fit, and style in $language]"},
+        {"type": "Footwear", "description": "[Highly detailed description covering style and color in $language]"},
+        {"type": "Accessories", "description": "[Highly detailed description covering style in $language]"}
+      ]
+    }
+  ]
+}
+''';
+
+  static Future<Map<String, dynamic>> generateOutfitRecommendations(String imagePath, {String language = 'English'}) async {
+    try {
+      final imageFile = File(imagePath);
+      final imageBytes = await imageFile.readAsBytes();
+
+      final model = GenerativeModel(
+        model: 'gemini-3.1-flash-lite',
+        apiKey: _apiKey,
+        systemInstruction: Content.system(outfitSystemPrompt(language)),
+      );
+
+      final prompt = Content.multi([
+        TextPart('Analyze my appearance/outfit and give me the best clothing recommendations according to the JSON format.'),
+        DataPart('image/webp', imageBytes),
+      ]);
+
+      final response = await model.generateContent([prompt]);
+      final rawText = response.text ?? '';
+
+      final cleaned = rawText
+          .replaceAll('```json', '')
+          .replaceAll('```', '')
+          .trim();
+
+      return jsonDecode(cleaned) as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('GeminiService.generateOutfitRecommendations error: $e');
+      return {};
+    }
+  }
+
+  // ══ HAIRSTYLE RECOMMENDATIONS ════════════════════════════════════════════════
+
+  static String hairStyleSystemPrompt(String language) => '''
+You are an elite Celebrity Hair Stylist and Barber. Your task is to analyze the user's uploaded photo, consider their text preferences, and generate a personalized premium hairstyle report.
+
+IMPORTANT RULE 1: First, check if the image actually contains a human face. If the image does NOT contain a human face, you must set "is_human_detected" to false and provide an "error_message".
+IMPORTANT RULE 2: If a human face is detected, set "is_human_detected" to true and generate a highly detailed 4-hairstyle report.
+IMPORTANT RULE 3: You MUST write your entire response exclusively in the $language language.
+IMPORTANT RULE 4: You must rank exactly 4 hairstyles (#1 to #4) and give each a Match Score (%) and a Benefit Tag (e.g., Enhances Jawline, Professional Look, Makes Face Slimmer).
+
+Return ONLY raw JSON. No markdown, no backticks.
+
+{
+  "is_human_detected": true,
+  "error_message": "",
+  "face_shape_analysis": "[Detailed paragraph analyzing their face shape in $language]",
+  "symmetry_score": "[e.g. 85%]",
+  "attractiveness_score": "[e.g. 90%]",
+  "youthfulness_score": "[e.g. 88%]",
+  "jawline": "[e.g. Strong/Defined]",
+  "forehead": "[e.g. High/Average]",
+  "hairline": "[e.g. Straight/Receding]",
+  "recommendations": [
+    {
+      "rank": "#1",
+      "style_name": "[Name of the hairstyle in $language]",
+      "benefit_tag": "[e.g. Enhances Jawline in $language]",
+      "match_score": "98%",
+      "description": "[Detailed description covering the cut in $language]",
+      "styling_advice": "[Products to use in $language]",
+      "maintenance": "[Maintenance schedule in $language]"
+    },
+    {
+      "rank": "#2",
+      "style_name": "[Name of the hairstyle in $language]",
+      "benefit_tag": "[e.g. Professional Look in $language]",
+      "match_score": "92%",
+      "description": "[Description in $language]",
+      "styling_advice": "[Advice in $language]",
+      "maintenance": "[Maintenance in $language]"
+    },
+    {
+      "rank": "#3",
+      "style_name": "[Name of the hairstyle in $language]",
+      "benefit_tag": "[e.g. Low Maintenance in $language]",
+      "match_score": "88%",
+      "description": "[Description in $language]",
+      "styling_advice": "[Advice in $language]",
+      "maintenance": "[Maintenance in $language]"
+    },
+    {
+      "rank": "#4",
+      "style_name": "[Name of the hairstyle in $language]",
+      "benefit_tag": "[e.g. Edgy & Modern in $language]",
+      "match_score": "85%",
+      "description": "[Description in $language]",
+      "styling_advice": "[Advice in $language]",
+      "maintenance": "[Maintenance in $language]"
+    }
+  ]
+}
+''';
+
+  static Future<Map<String, dynamic>> generateHairStyleRecommendations(String imagePath, String preferences, {String language = 'English'}) async {
+    try {
+      final imageFile = File(imagePath);
+      final imageBytes = await imageFile.readAsBytes();
+
+      final model = GenerativeModel(
+        model: 'gemini-2.5-flash',
+        apiKey: _apiKey,
+        systemInstruction: Content.system(hairStyleSystemPrompt(language)),
+      );
+
+      final userText = preferences.isNotEmpty 
+          ? 'Analyze my face shape and give me the best hairstyle recommendations. My preferences: \$preferences'
+          : 'Analyze my face shape and give me the best hairstyle recommendations according to the JSON format.';
+
+      final prompt = Content.multi([
+        TextPart(userText),
+        DataPart('image/jpeg', imageBytes),
+      ]);
+
+      final response = await model.generateContent([prompt]);
+      final rawText = response.text ?? '';
+
+      final cleaned = rawText
+          .replaceAll('```json', '')
+          .replaceAll('```', '')
+          .trim();
+
+      return jsonDecode(cleaned) as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('GeminiService.generateHairStyleRecommendations error: $e');
+      return {};
+    }
+  }
+
+  // ══ HAIRSTYLE IMAGE GENERATION ═════════════════════════════════════════════
+
+  static Future<String?> generateHairStyleImage(String imagePath, String prompt) async {
+    try {
+      final imageFile = File(imagePath);
+      final imageBytes = await imageFile.readAsBytes();
+      final base64Image = base64Encode(imageBytes);
+
+      final dio = Dio();
+      // Exact implementation as per official Gemini docs for image-to-image editing
+      // https://ai.google.dev/gemini-api/docs/imagen
+      final url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=$_apiKey';
+
+      // Match the official docs structure: flat parts array with text + inlineData
+      final response = await dio.post(
+        url,
+        data: {
+          'contents': [
+            {
+              'parts': [
+                {'text': prompt},
+                {
+                  'inlineData': {
+                    'mimeType': 'image/jpeg',
+                    'data': base64Image,
+                  }
+                }
+              ]
+            }
+          ],
+          'generationConfig': {
+            'responseModalities': ['IMAGE', 'TEXT'],
+          },
+        },
+        options: Options(
+          headers: {'Content-Type': 'application/json'},
+          validateStatus: (status) => true,
+          receiveTimeout: const Duration(seconds: 120),
+          sendTimeout: const Duration(seconds: 60),
+        ),
+      );
+
+      debugPrint('Gemini image API status: ${response.statusCode}');
+      final data = response.data;
+
+      if (data == null) {
+        debugPrint('Gemini API returned null data');
+        return null;
+      }
+
+      if (data['error'] != null) {
+        debugPrint('Gemini API Error: ${data['error']}');
+        return null;
+      }
+
+      if (data['candidates'] != null && (data['candidates'] as List).isNotEmpty) {
+        final parts = data['candidates'][0]['content']['parts'] as List;
+        debugPrint('Gemini returned ${parts.length} parts');
+
+        // Scan ALL parts — prioritize inlineData image over text
+        String? imageBase64;
+        String? textResult;
+
+        for (var part in parts) {
+          debugPrint('Part keys: ${part.keys.toList()}');
+          if (part['inlineData'] != null) {
+            imageBase64 = part['inlineData']['data'] as String?;
+            debugPrint('Found image! mimeType: ${part['inlineData']['mimeType']}, length: ${imageBase64?.length}');
+          } else if (part['text'] != null) {
+            final t = part['text'] as String;
+            if (t.isNotEmpty) {
+              textResult = t;
+              debugPrint('Text part (${t.length} chars): ${t.substring(0, t.length.clamp(0, 120))}');
+            }
+          }
+        }
+
+        if (imageBase64 != null && imageBase64.isNotEmpty) {
+          return imageBase64; // Return base64 image string
+        }
+        if (textResult != null) {
+          debugPrint('No image in response. Text only returned.');
+          return textResult;
+        }
+      } else {
+        debugPrint('Gemini API no candidates: $data');
+      }
+      return null;
+    } catch (e) {
+      debugPrint('GeminiService.generateHairStyleImage error: $e');
+      return null;
+    }
   }
 
   // ══ CHAT WITH COACH ═════════════════════════════════════════════════════════
