@@ -1,7 +1,15 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
+
+class DeviceLimitExceededException implements Exception {
+  final String message;
+  DeviceLimitExceededException(this.message);
+  @override
+  String toString() => message;
+}
 
 /// Collected device information.
 class DeviceInfo {
@@ -36,8 +44,9 @@ class DeviceService {
   DeviceService._();
 
   static const int _maxAccountsPerDevice = 2;
+  static const int _maxDevicesPerAccount = 2;
 
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instanceFor(app: Firebase.app(), databaseId: 'v2db');
 
   CollectionReference get _devices => _db.collection('devices');
   CollectionReference get _users => _db.collection('users');
@@ -76,79 +85,93 @@ class DeviceService {
     );
   }
 
-  // ── Register device + check for suspicious activity ──────────────────────────
+  // ── Register device + check limits ──────────────────────────────────────────
 
-  /// Call this right after a new account is created.
-  /// Returns true if the account was blocked.
-  Future<bool> registerAndCheckDevice(String uid, DeviceInfo info) async {
-    try {
-      final deviceRef = _devices.doc(info.deviceId);
-      final deviceDoc = await deviceRef.get();
+  /// Call this right after a new account is created or signed in.
+  /// Throws DeviceLimitExceededException if limits are violated.
+  Future<void> registerAndCheckDevice(String uid, DeviceInfo info) async {
+    final deviceRef = _devices.doc(info.deviceId);
+    final userRef = _users.doc(uid);
 
-      List<String> uids = [];
+    // 1. Fetch current data
+    final deviceDoc = await deviceRef.get();
+    final userDoc = await userRef.get();
 
-      if (deviceDoc.exists) {
-        final data = deviceDoc.data() as Map<String, dynamic>;
-        uids = List<String>.from(data['uids'] ?? []);
-      }
-
-      // Add new uid if not already tracked
-      if (!uids.contains(uid)) {
-        uids.add(uid);
-      }
-
-      // Update device record
-      await deviceRef.set({
-        'device_id': info.deviceId,
-        'model': info.deviceModel,
-        'os': info.deviceOs,
-        'brand': info.brand,
-        'account_count': uids.length,
-        'uids': uids,
-        'last_seen': FieldValue.serverTimestamp(),
-        'first_seen': deviceDoc.exists
-            ? (deviceDoc.data() as Map<String, dynamic>)['first_seen']
-            : FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-
-      // Check threshold
-      if (uids.length > _maxAccountsPerDevice) {
-        await _blockAllAccountsOnDevice(info.deviceId, uids);
-        debugPrint('DeviceService: Suspicious activity — blocked ${uids.length} accounts on device ${info.deviceId}');
-        return true; // blocked
-      }
-
-      return false; // not blocked
-    } catch (e) {
-      debugPrint('DeviceService.registerAndCheckDevice error: $e');
-      return false;
+    List<String> deviceUids = [];
+    if (deviceDoc.exists) {
+      final data = deviceDoc.data() as Map<String, dynamic>;
+      deviceUids = List<String>.from(data['uids'] ?? []);
     }
-  }
 
-  // ── Block all accounts linked to this device ─────────────────────────────────
+    List<String> userDevices = [];
+    if (userDoc.exists) {
+      final data = userDoc.data() as Map<String, dynamic>;
+      userDevices = List<String>.from(data['active_devices'] ?? []);
+    }
 
-  Future<void> _blockAllAccountsOnDevice(String deviceId, List<String> uids) async {
+    // 2. Check Device Limit (Max 2 accounts per device)
+    if (!deviceUids.contains(uid)) {
+      if (deviceUids.length >= _maxAccountsPerDevice) {
+        throw DeviceLimitExceededException(
+            'This device has reached the maximum limit of $_maxAccountsPerDevice accounts.');
+      }
+      deviceUids.add(uid);
+    }
+
+    // 3. Check Account Limit (Max 2 devices per account)
+    if (!userDevices.contains(info.deviceId)) {
+      if (userDevices.length >= _maxDevicesPerAccount) {
+        throw DeviceLimitExceededException(
+            'Your account is already logged into $_maxDevicesPerAccount devices. Please log out from another device first.');
+      }
+      userDevices.add(info.deviceId);
+    }
+
+    // 4. Update Firestore in a batch
     final batch = _db.batch();
-    final now = Timestamp.now();
-    const reason = 'Multiple accounts detected from the same device. Suspicious activity policy violation.';
 
-    for (final uid in uids) {
-      batch.update(_users.doc(uid), {
-        'block': true,
-        'block_date': now,
-        'block_reason': reason,
-        'updated_at': FieldValue.serverTimestamp(),
-      });
-    }
+    batch.set(deviceRef, {
+      'device_id': info.deviceId,
+      'model': info.deviceModel,
+      'os': info.deviceOs,
+      'brand': info.brand,
+      'account_count': deviceUids.length,
+      'uids': deviceUids,
+      'last_seen': FieldValue.serverTimestamp(),
+      'first_seen': deviceDoc.exists
+          ? (deviceDoc.data() as Map<String, dynamic>)['first_seen']
+          : FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
 
-    // Mark device as flagged
-    batch.update(_devices.doc(deviceId), {
-      'flagged': true,
-      'flagged_at': now,
-      'block_reason': reason,
-    });
+    batch.set(userRef, {
+      'active_devices': userDevices,
+    }, SetOptions(merge: true));
 
     await batch.commit();
+  }
+
+  // ── Remove device on logout ────────────────────────────────────────────────
+
+  Future<void> removeDevice(String uid) async {
+    try {
+      final info = await collectDeviceInfo();
+      final userRef = _users.doc(uid);
+      
+      final userDoc = await userRef.get();
+      if (userDoc.exists) {
+        final data = userDoc.data() as Map<String, dynamic>;
+        List<String> userDevices = List<String>.from(data['active_devices'] ?? []);
+        
+        if (userDevices.contains(info.deviceId)) {
+          userDevices.remove(info.deviceId);
+          await userRef.update({
+            'active_devices': userDevices,
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('DeviceService.removeDevice error: $e');
+    }
   }
 
   // ── Check if current user is blocked ─────────────────────────────────────────

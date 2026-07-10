@@ -236,7 +236,7 @@ class TaskManagementScreen extends ConsumerWidget {
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
-                  children: ['morning', 'afternoon', 'evening', 'night'].map((t) {
+                  children: ['morning', 'noon', 'evening', 'night'].map((t) {
                     final isSelected = timeOfDay == t;
                     return ChoiceChip(
                       label: Text(t.toUpperCase(), style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: isSelected ? Colors.black : Colors.white70)),

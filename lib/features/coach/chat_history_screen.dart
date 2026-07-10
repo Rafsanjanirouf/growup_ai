@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/services/local_db_service.dart';
+import '../../core/services/firestore_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatHistoryScreen extends StatefulWidget {
   const ChatHistoryScreen({super.key});
@@ -22,7 +24,12 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
   }
 
   Future<void> _loadSessions() async {
-    final raw = await LocalDbService().getChatSessions();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+    final raw = await FirestoreService().getChatSessions(user.uid);
     setState(() {
       _sessions = raw;
       _isLoading = false;
@@ -51,7 +58,10 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
     );
 
     if (confirm == true) {
-      await LocalDbService().deleteChatSession(id);
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirestoreService().deleteChatSession(user.uid, id);
+      }
       await _loadSessions();
     }
   }
@@ -116,7 +126,12 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                               itemBuilder: (context, idx) {
                                 final s = _sessions[idx];
                                 final title = s['title'] as String;
-                                final dateRaw = DateTime.parse(s['updated_at'] as String);
+                                DateTime dateRaw;
+                                if (s['updated_at'] is String) {
+                                  dateRaw = DateTime.parse(s['updated_at'] as String);
+                                } else {
+                                  dateRaw = (s['updated_at'] as Timestamp).toDate();
+                                }
                                 final dateStr = DateFormat('d MMM yyyy, h:mm a').format(dateRaw);
                                 final category = 'General';
 

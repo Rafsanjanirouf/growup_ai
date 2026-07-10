@@ -6,12 +6,13 @@ import '../../core/theme/app_theme.dart';
 import '../../core/services/gemini_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/user_provider.dart';
-import '../../core/providers/outfit_history_provider.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'outfit_history_screen.dart';
 import '../../core/widgets/language_picker_sheet.dart';
 import '../../core/widgets/glass_container.dart';
-import '../../core/services/sync_service.dart';
+import '../../core/widgets/usage_limit_progress_bar.dart';
+
 import '../../core/services/firestore_service.dart';
 import 'package:intl/intl.dart';
 
@@ -28,6 +29,30 @@ class _AiOutfitScreenState extends ConsumerState<AiOutfitScreen> {
   
   Map<String, dynamic>? _outfitData;
   int _selectedCategoryIndex = 0;
+
+  int _usedOutfit = 0;
+  int _outfitLimit = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLimits();
+  }
+
+  Future<void> _fetchLimits() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final dateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final used = await FirestoreService().getDailyImageToTextUsage(userId: user.uid, dateKey: dateKey);
+      final limit = await FirestoreService().getDailyImageToTextLimit();
+      if (mounted) {
+        setState(() {
+          _usedOutfit = used;
+          _outfitLimit = limit;
+        });
+      }
+    }
+  }
 
   IconData _getIconForType(String type) {
     final lower = type.toLowerCase();
@@ -91,57 +116,67 @@ class _AiOutfitScreenState extends ConsumerState<AiOutfitScreen> {
 
     setState(() {
       _isLoading = false;
-      if (data.isNotEmpty) {
-        if (data['is_human_detected'] == false) {
-          // Show error dialog
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              backgroundColor: AppTheme.surface,
-              title: Text(
-                'Invalid Image',
-                style: GoogleFonts.outfit(color: AppTheme.danger, fontWeight: FontWeight.bold),
-              ),
-              content: Text(
-                data['error_message'] ?? 'Please upload a photo of a person.',
-                style: GoogleFonts.outfit(color: Colors.white),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text('OK', style: GoogleFonts.outfit(color: AppTheme.primary)),
-                ),
-              ],
+    });
+
+    if (data.isNotEmpty) {
+      if (data['is_human_detected'] == false) {
+        // Show error dialog
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: AppTheme.surface,
+            title: Text(
+              'Invalid Image',
+              style: GoogleFonts.outfit(color: AppTheme.danger, fontWeight: FontWeight.bold),
             ),
-          );
-          _outfitData = null;
-        } else if (data.containsKey('categories')) {
+            content: Text(
+              data['error_message'] ?? 'Please upload a photo of a person.',
+              style: GoogleFonts.outfit(color: Colors.white),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('OK', style: GoogleFonts.outfit(color: AppTheme.primary)),
+              ),
+            ],
+          ),
+        );
+      } else if (data.containsKey('categories')) {
+        setState(() {
           _outfitData = data;
-          
-          // Track Usage
-          if (user != null) {
-            final dateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
-            FirestoreService().trackImageToTextUsage(userId: user.uid, dateKey: dateKey);
-          }
-          
-          // Save to Local DB History
-          final userId = user?.uid ?? 'anonymous';
-          final newRecord = OutfitRecord(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            userId: userId,
+        });
+
+        // Track Usage
+        if (user != null) {
+          final dateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+          FirestoreService().trackImageToTextUsage(userId: user.uid, dateKey: dateKey);
+        }
+
+        // Save to Firestore
+        if (user != null) {
+          final scanId = DateTime.now().millisecondsSinceEpoch.toString();
+          final imageUrl = await FirestoreService().uploadImage(_selectedImage!.path, user.uid, scanId);
+          await FirestoreService().saveOutfitRecord(
+            id: scanId,
+            userId: user.uid,
             date: DateTime.now(),
-            imagePath: _selectedImage!.path,
+            imageUrl: imageUrl,
             fullData: data,
           );
-          ref.read(outfitHistoryProvider.notifier).addOutfitScan(newRecord);
-          
-          // Trigger background sync to upload to Firestore
-          SyncService().syncPendingScans();
+
+          // Update limits UI after successful scan
+          final dateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+          final updatedUsed = await FirestoreService().getDailyImageToTextUsage(userId: user.uid, dateKey: dateKey);
+          if (mounted) {
+            setState(() {
+              _usedOutfit = updatedUsed;
+            });
+          }
         }
-      } else {
-        // Fallback or error handling could go here.
       }
-    });
+    } else {
+      // Fallback or error handling could go here.
+    }
   }
 
   Color _hexToColor(String hexString) {
@@ -242,6 +277,8 @@ class _AiOutfitScreenState extends ConsumerState<AiOutfitScreen> {
         ],
       ),
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: AppTheme.backgroundGradient,
         ),
@@ -251,6 +288,12 @@ class _AiOutfitScreenState extends ConsumerState<AiOutfitScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                UsageLimitProgressBar(
+                  title: 'Daily AI Stylist',
+                  used: _usedOutfit,
+                  limit: _outfitLimit,
+                  icon: Icons.checkroom_rounded,
+                ),
                 // Image Input Area
                 GestureDetector(
                   onTap: _pickImage,
@@ -264,10 +307,53 @@ class _AiOutfitScreenState extends ConsumerState<AiOutfitScreen> {
                       ),
                       clipBehavior: Clip.antiAlias,
                     child: _selectedImage != null
-                        ? Image.file(
-                            _selectedImage!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
+                        ? Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.file(
+                                _selectedImage!,
+                                fit: BoxFit.cover,
+                              ),
+                              // Gradient Overlay for button visibility
+                              Positioned.fill(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [Colors.transparent, Colors.black.withAlpha(150)],
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      stops: const [0.7, 1.0],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 16,
+                                right: 16,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withAlpha(40),
+                                    borderRadius: BorderRadius.circular(30),
+                                    border: Border.all(color: Colors.white.withAlpha(80)),
+                                    boxShadow: [
+                                      BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 10),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.cameraswitch_rounded, color: Colors.white, size: 18),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Retake Photo',
+                                        style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           )
                         : Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -277,6 +363,7 @@ class _AiOutfitScreenState extends ConsumerState<AiOutfitScreen> {
                                 decoration: BoxDecoration(
                                   color: AppTheme.primary.withAlpha(20),
                                   shape: BoxShape.circle,
+                                  border: Border.all(color: AppTheme.primary.withAlpha(50), width: 2),
                                 ),
                                 child: const Icon(
                                   Icons.add_photo_alternate_rounded,
@@ -327,31 +414,57 @@ class _AiOutfitScreenState extends ConsumerState<AiOutfitScreen> {
                       boxShadow: _selectedImage != null && !_isLoading
                           ? [
                               BoxShadow(
-                                color: AppTheme.primary.withAlpha(100),
-                                blurRadius: 16,
-                                offset: const Offset(0, 4),
+                                color: AppTheme.primary.withAlpha(150),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
                               )
                             ]
                           : [],
                     ),
                     child: Center(
                       child: _isLoading
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'AI Stylist is thinking...',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
                             )
-                          : Text(
-                              'ANALYZE OUTFIT',
-                              style: GoogleFonts.outfit(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                color: _selectedImage != null ? Colors.black : Colors.white54,
-                                letterSpacing: 1.5,
-                              ),
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome_rounded,
+                                  color: _selectedImage != null ? Colors.black : Colors.white54,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'ANALYZE OUTFIT',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    color: _selectedImage != null ? Colors.black : Colors.white54,
+                                    letterSpacing: 1.5,
+                                  ),
+                                ),
+                              ],
                             ),
                     ),
                   ),
@@ -404,8 +517,17 @@ class _AiOutfitScreenState extends ConsumerState<AiOutfitScreen> {
                                 Text(
                                   colorName,
                                   style: GoogleFonts.outfit(
-                                    color: Colors.white70,
-                                    fontSize: 12,
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  colorHex.toUpperCase(),
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.white54,
+                                    fontSize: 10,
+                                    letterSpacing: 1.0,
                                   ),
                                 ),
                               ],
@@ -434,34 +556,30 @@ class _AiOutfitScreenState extends ConsumerState<AiOutfitScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.primary.withAlpha(20),
-                            Colors.transparent,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppTheme.primary.withAlpha(80), width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primary.withAlpha(10),
-                            blurRadius: 20,
-                            spreadRadius: -5,
+                    GlassContainer(
+                      glowColor: AppTheme.primary,
+                      padding: const EdgeInsets.all(24),
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            top: -10,
+                            right: -10,
+                            child: Icon(
+                              Icons.format_quote_rounded,
+                              size: 80,
+                              color: Colors.white.withAlpha(15),
+                            ),
+                          ),
+                          Text(
+                            _outfitData!['overall_verdict'].toString(),
+                            style: GoogleFonts.outfit(
+                              color: Colors.white.withAlpha(240),
+                              fontSize: 16,
+                              height: 1.6,
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
                         ],
-                      ),
-                      child: Text(
-                        _outfitData!['overall_verdict'].toString(),
-                        style: GoogleFonts.outfit(
-                          color: Colors.white.withAlpha(240),
-                          fontSize: 16,
-                          height: 1.6,
-                        ),
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -492,10 +610,10 @@ class _AiOutfitScreenState extends ConsumerState<AiOutfitScreen> {
                             },
                             child: Container(
                               margin: const EdgeInsets.only(right: 12),
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                               decoration: BoxDecoration(
                                 color: isSelected ? AppTheme.primary.withAlpha(20) : AppTheme.surface,
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(30),
                                 border: Border.all(
                                   color: isSelected ? AppTheme.primary : AppTheme.glassBorder,
                                   width: 1.5,
@@ -530,21 +648,9 @@ class _AiOutfitScreenState extends ConsumerState<AiOutfitScreen> {
                             final type = item['type']?.toString() ?? 'Item';
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 16.0),
-                              child: Container(
-                                width: double.infinity,
+                              child: GlassContainer(
+                                glowColor: AppTheme.primary.withAlpha(50),
                                 padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.surface.withAlpha(150),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: Colors.white10, width: 1),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withAlpha(20),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [

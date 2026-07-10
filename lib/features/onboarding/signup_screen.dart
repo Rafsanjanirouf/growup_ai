@@ -142,7 +142,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'AURA',
+                        'GrowUp AI',
                         style: GoogleFonts.outfit(
                           fontSize: 32,
                           fontWeight: FontWeight.w900,
@@ -251,7 +251,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                 onTap: () {
                                   _showLegalDocument(
                                     'Terms of Service',
-                                    'Welcome to Aura Lookmaxxing Coach!\n\n'
+                                    'Welcome to GrowUp AI Lookmaxxing Coach!\n\n'
                                     'By registering, you agree to: \n\n'
                                     '1. Educational Guidance: Lookmaxxing, Mewing, and jaw fitness routines are for self-improvement educational purposes only. They do not constitute professional clinical medical advice.\n\n'
                                     '2. Data Privacy: Your facial photos remain locally processed or safely anonymized for AI analysis.\n\n'

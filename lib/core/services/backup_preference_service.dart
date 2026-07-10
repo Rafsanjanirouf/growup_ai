@@ -1,9 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'local_db_service.dart';
 import 'firestore_service.dart';
-import 'sync_service.dart';
+
 
 /// Central gate for all cloud backup operations.
 ///
@@ -46,36 +45,9 @@ class BackupPreferenceService {
     final prefEnabled = prefs.getBool(_keyEnabled);
     final prefConsent = prefs.getBool(_keyConsentShown);
 
-    // Cross-check with SQLite config (authoritative on conflicts)
-    try {
-      final db = LocalDbService();
-      final dbEnabled = await db.getConfig(_keyEnabled);
-      final dbConsent = await db.getConfig(_keyConsentShown);
-
-      // SQLite is the authoritative source if it has data
-      if (dbEnabled != null) {
-        _backupEnabled = dbEnabled == 'true';
-        // Sync back to prefs in case they diverged
-        await prefs.setBool(_keyEnabled, _backupEnabled);
-      } else if (prefEnabled != null) {
-        _backupEnabled = prefEnabled;
-        // Sync to SQLite
-        await db.setConfig(_keyEnabled, _backupEnabled.toString());
-      }
-
-      if (dbConsent != null) {
-        _consentShown = dbConsent == 'true';
-        await prefs.setBool(_keyConsentShown, _consentShown);
-      } else if (prefConsent != null) {
-        _consentShown = prefConsent;
-        await db.setConfig(_keyConsentShown, _consentShown.toString());
-      }
-    } catch (e) {
-      // SQLite not ready yet — fall back to prefs values
-      _backupEnabled = prefEnabled ?? false;
-      _consentShown  = prefConsent ?? false;
-      debugPrint('BackupPreferenceService.init: SQLite fallback ($e)');
-    }
+    // Removed SQLite config, now purely relying on SharedPreferences
+    _backupEnabled = prefEnabled ?? false;
+    _consentShown = prefConsent ?? false;
 
     _initialized = true;
     debugPrint(
@@ -102,12 +74,7 @@ class BackupPreferenceService {
     // 1. SharedPreferences
     await _prefs?.setBool(_keyEnabled, value);
 
-    // 2. SQLite config
-    try {
-      await LocalDbService().setConfig(_keyEnabled, value.toString());
-    } catch (e) {
-      debugPrint('BackupPreferenceService.setBackupEnabled SQLite error: $e');
-    }
+
 
     // 3. Firestore user doc (fire-and-forget — for analytics)
     _syncToFirestore({'backup_enabled': value});
@@ -115,8 +82,7 @@ class BackupPreferenceService {
     debugPrint('BackupPreferenceService: backup ${value ? 'ENABLED' : 'DISABLED'}');
 
     if (value) {
-      // Push any locally stored scans to Firestore
-      SyncService().syncPendingScans();
+      // Background sync is now handled individually when scans happen.
     }
   }
 
@@ -128,12 +94,7 @@ class BackupPreferenceService {
     // 1. SharedPreferences
     await _prefs?.setBool(_keyConsentShown, true);
 
-    // 2. SQLite config
-    try {
-      await LocalDbService().setConfig(_keyConsentShown, 'true');
-    } catch (e) {
-      debugPrint('BackupPreferenceService.markConsentShown SQLite error: $e');
-    }
+
 
     // 3. Firestore user doc (fire-and-forget — for analytics)
     _syncToFirestore({
@@ -162,9 +123,6 @@ class BackupPreferenceService {
 
     await _prefs?.remove(_keyEnabled);
     await _prefs?.remove(_keyConsentShown);
-    try {
-      await LocalDbService().deleteConfig(_keyEnabled);
-      await LocalDbService().deleteConfig(_keyConsentShown);
-    } catch (_) {}
+
   }
 }

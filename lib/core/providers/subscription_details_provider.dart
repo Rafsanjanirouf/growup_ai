@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -52,7 +53,7 @@ final subscriptionDetailsProvider = FutureProvider<SubscriptionDetails?>((ref) a
     }
 
     // 2. Check Custom Database Override (Firestore)
-    final db = FirebaseFirestore.instance;
+    final db = FirebaseFirestore.instanceFor(app: Firebase.app(), databaseId: 'v2db');
     final doc = await db.collection('subscription').doc(user.uid).get();
 
     if (doc.exists) {

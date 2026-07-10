@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../core/services/local_db_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../core/services/firestore_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/glass_container.dart';
 import 'hair_style_image_fullscreen.dart';
@@ -16,7 +17,7 @@ class HairStyleHistoryScreen extends StatefulWidget {
 }
 
 class _HairStyleHistoryScreenState extends State<HairStyleHistoryScreen> {
-  final LocalDbService _dbService = LocalDbService();
+  final FirestoreService _dbService = FirestoreService();
   bool _isLoading = true;
   List<Map<String, dynamic>> _history = [];
 
@@ -30,7 +31,7 @@ class _HairStyleHistoryScreenState extends State<HairStyleHistoryScreen> {
     final user = FirebaseAuth.instance.currentUser;
     final userId = user?.uid ?? 'guest';
     
-    final records = await _dbService.getAllHairStyleScans(userId);
+    final records = await _dbService.getHairStyleScans(userId);
     setState(() {
       _history = records;
       _isLoading = false;
@@ -38,7 +39,7 @@ class _HairStyleHistoryScreenState extends State<HairStyleHistoryScreen> {
   }
 
   Future<void> _deleteRecord(String id) async {
-    await _dbService.deleteHairStyleScan(id);
+    await _dbService.deleteHairStyleRecord(id);
     _loadHistory();
   }
 
@@ -163,16 +164,13 @@ class _HairStyleHistoryScreenState extends State<HairStyleHistoryScreen> {
       itemBuilder: (context, index) {
         final item = _history[index];
         final id = item['id'] as String;
-        final dateStr = item['date'] as String;
-        final imagePath = item['image_path'] as String?;
-        
-        final date = DateTime.tryParse(dateStr);
-        final formattedDate = date != null
-            ? '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}'
-            : dateStr;
-
-        final rawData = item['full_data'] as String;
-        final data = jsonDecode(rawData);
+        final dateObj = item['date'] is Timestamp ? (item['date'] as Timestamp).toDate() : DateTime.tryParse(item['date'].toString());
+        final formattedDate = dateObj != null
+            ? '${dateObj.day}/${dateObj.month}/${dateObj.year} ${dateObj.hour}:${dateObj.minute.toString().padLeft(2, '0')}'
+            : item['date'].toString();
+            
+        final imagePath = item['image_url'] as String?;
+        final data = item['full_data'] as Map<String, dynamic>? ?? {};
 
         // Check if it's image mode
         final isImageMode = data['mode'] == 'image';
@@ -227,7 +225,7 @@ class _HairStyleHistoryScreenState extends State<HairStyleHistoryScreen> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                if (imagePath != null && File(imagePath).existsSync())
+                if (imagePath != null && imagePath.isNotEmpty)
                   Container(
                     decoration: BoxDecoration(
                       border: Border.all(color: AppTheme.primary, width: 1.5),
@@ -241,12 +239,19 @@ class _HairStyleHistoryScreenState extends State<HairStyleHistoryScreen> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(14),
-                      child: Image.file(
-                        File(imagePath),
-                        width: 70,
-                        height: 70,
-                        fit: BoxFit.cover,
-                      ),
+                      child: imagePath.startsWith('http')
+                          ? Image.network(
+                              imagePath,
+                              width: 70,
+                              height: 70,
+                              fit: BoxFit.cover,
+                            )
+                          : (File(imagePath).existsSync() ? Image.file(
+                              File(imagePath),
+                              width: 70,
+                              height: 70,
+                              fit: BoxFit.cover,
+                            ) : const Icon(Icons.error, color: Colors.white54)),
                     ),
                   )
                 else
@@ -422,7 +427,7 @@ class _HairStyleHistoryScreenState extends State<HairStyleHistoryScreen> {
                     controller: controller,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     children: [
-                      if (imagePath != null && File(imagePath).existsSync())
+                      if (imagePath != null && imagePath.isNotEmpty)
                         Center(
                           child: Container(
                             decoration: BoxDecoration(
@@ -437,11 +442,17 @@ class _HairStyleHistoryScreenState extends State<HairStyleHistoryScreen> {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(18),
-                              child: Image.file(
-                                File(imagePath),
-                                height: 200,
-                                fit: BoxFit.cover,
-                              ),
+                              child: imagePath.startsWith('http')
+                                  ? Image.network(
+                                      imagePath,
+                                      height: 200,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : (File(imagePath).existsSync() ? Image.file(
+                                      File(imagePath),
+                                      height: 200,
+                                      fit: BoxFit.cover,
+                                    ) : const Icon(Icons.error, color: Colors.white54)),
                             ),
                           ),
                         ),

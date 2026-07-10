@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
@@ -10,7 +11,7 @@ import '../profile/backup_settings_screen.dart';
 import '../share/glow_up_share_screen.dart';
 import '../../core/providers/subscription_details_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../core/services/local_db_service.dart';
+
 import '../../core/services/firestore_service.dart';
 import '../../core/providers/habit_provider.dart';
 import '../../core/config/app_languages.dart';
@@ -101,7 +102,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Aura goals updated successfully!', style: GoogleFonts.outfit()),
+                        content: Text('GrowUp AI goals updated successfully!', style: GoogleFonts.outfit()),
                         backgroundColor: AppTheme.success,
                       ),
                     );
@@ -223,7 +224,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   const Icon(Icons.support_agent_rounded, color: AppTheme.secondary),
                   const SizedBox(width: 10),
                   Text(
-                    'Contact Aura Support',
+                    'Contact GrowUp AI Support',
                     style: GoogleFonts.outfit(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -320,11 +321,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     Text(
-                      'YOUR PROFILE',
+                      'Your Profile',
                       style: GoogleFonts.outfit(
-                        fontSize: 16,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 2.0,
                         color: Colors.white,
                       ),
                     ),
@@ -333,48 +333,110 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SizedBox(height: 28),
 
                 // User Bio Header Card
-                Center(
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 90,
-                        height: 90,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppTheme.secondary, width: 3),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.secondary.withAlpha(50),
-                              blurRadius: 16,
-                            )
-                          ],
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppTheme.secondary, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.secondary.withAlpha(50),
+                            blurRadius: 16,
+                          )
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/image/avater_image.png',
+                          fit: BoxFit.cover,
                         ),
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/image/avater_image.png',
-                            fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user.name.isEmpty ? 'Champ' : user.name,
+                            style: GoogleFonts.outfit(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'UID: ${FirebaseAuth.instance.currentUser?.uid ?? 'UNKNOWN'}',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 12,
+                                    color: Colors.white54,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              GestureDetector(
+                                onTap: () {
+                                  final uid = FirebaseAuth.instance.currentUser?.uid;
+                                  if (uid != null) {
+                                    Clipboard.setData(ClipboardData(text: uid));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('UID copied to clipboard!', style: GoogleFonts.outfit()),
+                                        backgroundColor: AppTheme.success,
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: const Padding(
+                                  padding: EdgeInsets.all(4.0),
+                                  child: Icon(
+                                    Icons.copy_rounded,
+                                    size: 14,
+                                    color: AppTheme.secondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Email: ${FirebaseAuth.instance.currentUser?.email ?? 'No email'}',
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              color: Colors.white54,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.secondary.withAlpha(30),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${user.gender} • ${user.age} Yrs',
+                              style: GoogleFonts.outfit(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.secondary,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        user.name.isEmpty ? 'Champ' : user.name,
-                        style: GoogleFonts.outfit(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${user.gender} • ${user.age} Years Old',
-                        style: GoogleFonts.outfit(
-                          fontSize: 13,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 32),
 
@@ -400,7 +462,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'AURA PRO UNLOCKED',
+                              'GrowUp AI PRO UNLOCKED',
                               style: GoogleFonts.outfit(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -629,8 +691,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       _buildSettingsTile(Icons.gavel_rounded, 'Terms of Service', 'Subscription rules and usage terms for Lookmaxxing coaching', () {
                         _showLegalDocument(
                           'Terms of Service',
-                          'Welcome to Aura Lookmaxxing Coach!\n\n'
-                              'By subscribing to Aura weekly trial (₹49) or pro plans, you agree to: \n\n'
+                          'Welcome to GrowUp AI Lookmaxxing Coach!\n\n'
+                              'By subscribing to GrowUp AI weekly trial (₹49) or pro plans, you agree to: \n\n'
                               '1. Educational Guidance: Lookmaxxing, Mewing, and jaw fitness routines are for self-improvement educational purposes only. They do not constitute professional clinical medical advice.\n\n'
                               '2. Subscription Renewals: Subscription billing is managed securely through RevenueCat. You can cancel active auto-renewing subscriptions at any point within Play Store/App Store subscriptions manager.',
                         );
@@ -681,7 +743,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     );
 
                     if (confirm == true) {
-                      await LocalDbService().clearAllData();
                       await ref.read(userStateProvider.notifier).resetState();
                       if (context.mounted) {
                         Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
@@ -1009,7 +1070,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Aura preferences updated successfully!', style: GoogleFonts.outfit()),
+                        content: Text('GrowUp AI preferences updated successfully!', style: GoogleFonts.outfit()),
                         backgroundColor: AppTheme.success,
                       ),
                     );

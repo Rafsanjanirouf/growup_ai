@@ -47,7 +47,7 @@ class MLKitScoringService {
     double eyeAlertness = ((leftEyeOpen + rightEyeOpen) / 2.0 * 100.0).clamp(60.0, 99.0);
 
     // 4. Aura Score (1 - 10 scale)
-    // Great posture + good eye alertness + slight smile = Elite Aura
+    // Great posture + good eye alertness + slight smile = Elite GrowUp AI
     double auraBase = 6.0;
     auraBase += (postureScore > 85 ? 1.0 : 0.0);
     auraBase += (symmetryScore > 85 ? 1.0 : 0.0);

@@ -5,12 +5,29 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:dio/dio.dart';
 import '../config/api_keys.dart';
 import '../providers/habit_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firestore_service.dart';
 
 class GeminiService {
+  static Future<void> _trackUsage(String category, int tokens) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      final dateKey = "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}";
+      await FirestoreService().trackAiUsage(
+        userId: user.uid,
+        dateKey: dateKey,
+        category: category,
+        tokensUsed: tokens,
+      );
+    } catch (e) {
+      debugPrint('GeminiService._trackUsage error: $e');
+    }
+  }
   static const String _apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: ApiKeys.geminiApiKey);
   /// Structured system prompt — returns ALL fields from database_schema.md scan_history table.
   static String analyticsSystemPrompt(String language) => '''
-You are Aura AI, an expert Lookmaxxing and aesthetics doctor coach.
+You are GrowUp AI, an expert Lookmaxxing and aesthetics doctor coach.
 You will receive geometric scores from ML Kit. Your job is to visually inspect the photo, confirm the geometry, and provide a deep, highly detailed diagnostics report.
 
 IMPORTANT RULE: You MUST write ALL text descriptions, titles, messages, and items exclusively in the $language language. 
@@ -21,13 +38,21 @@ MUST INCLUDE 10+ IMPORTANT REPORT INSIGHTS spread across the categories.
 Return ONLY raw JSON. No markdown, no backticks.
 
 {
+  "overall_ai_face_score": 86.5,
+  "face_shape": "Diamond",
+  "face_symmetry": 85.0,
+  "skin_health_score": 78.0,
+  "acne_detection": "Clear",
+  "face_age_estimation": 24,
+  "dark_circles": "Slight",
+  "hair_density": 88.0,
   "analytics": {
     "markers": [
       {"title": "[Title in $language]", "message": "[Message in $language]", "top": 90.0, "left": 155.0},
       {"title": "[Title in $language]", "message": "[Message in $language]", "top": 190.0, "left": 210.0}
     ],
     "reports": {
-      "aura": { "score": "86%", "items": ["[Aura insight 1 in $language]", "[Aura insight 2 in $language]"] },
+      "aura": { "score": "86%", "items": ["[GrowUp AI insight 1 in $language]", "[GrowUp AI insight 2 in $language]"] },
       "structure": { "score": "86%", "items": ["[Jawline insight 1 in $language]", "[Jawline insight 2 in $language]"] },
       "skin": { "score": "78%", "items": ["[Skin insight 1 in $language]", "[Skin insight 2 in $language]"] },
       "eyes": { "score": "80%", "items": ["[Eye insight 1 in $language]", "[Eye insight 2 in $language]"] },
@@ -73,6 +98,10 @@ Return ONLY raw JSON. No markdown, no backticks.
         .replaceAll('```', '')
         .trim();
 
+    final exactTokens = response.usageMetadata?.totalTokenCount;
+    final estimatedTokens = exactTokens ?? ((prompt.toString().length + rawText.length) / 4).round();
+    await _trackUsage('analytics_scan', estimatedTokens);
+
     return jsonDecode(cleaned) as Map<String, dynamic>;
   }
 
@@ -97,9 +126,10 @@ Return ONLY raw JSON. No markdown, no backticks.
         }
       }
 
-      parseSection(decoded['morning_routine'],   'morning',   'wb_sunny',     'dm');
-      parseSection(decoded['afternoon_routine'], 'afternoon', 'bolt',         'da');
-      parseSection(decoded['night_routine'],     'night',     'nights_stay',  'dn');
+      parseSection(decoded['morning_routine'], 'morning', 'wb_sunny', 'dm');
+      parseSection(decoded['noon_routine'],    'noon',    'wb_twilight', 'dn');
+      parseSection(decoded['evening_routine'], 'evening', 'wb_iridescent', 'de');
+      parseSection(decoded['night_routine'],   'night',   'nights_stay',  'dnt');
 
       return habits;
     } catch (e) {
@@ -209,6 +239,10 @@ Return ONLY raw JSON. No markdown, no backticks.
           .replaceAll('```', '')
           .trim();
 
+      final exactTokens = response.usageMetadata?.totalTokenCount;
+      final estimatedTokens = exactTokens ?? ((prompt.toString().length + rawText.length) / 4).round();
+      await _trackUsage('outfit_generate', estimatedTokens);
+
       return jsonDecode(cleaned) as Map<String, dynamic>;
     } catch (e) {
       debugPrint('GeminiService.generateOutfitRecommendations error: $e');
@@ -307,6 +341,10 @@ Return ONLY raw JSON. No markdown, no backticks.
           .replaceAll('```', '')
           .trim();
 
+      final exactTokens = response.usageMetadata?.totalTokenCount;
+      final estimatedTokens = exactTokens ?? ((prompt.toString().length + rawText.length) / 4).round();
+      await _trackUsage('haircut_text', estimatedTokens);
+
       return jsonDecode(cleaned) as Map<String, dynamic>;
     } catch (e) {
       debugPrint('GeminiService.generateHairStyleRecommendations error: $e');
@@ -392,6 +430,8 @@ Return ONLY raw JSON. No markdown, no backticks.
         }
 
         if (imageBase64 != null && imageBase64.isNotEmpty) {
+          // Track image generation (since there's no token count, track as 1 call for tokens)
+          await _trackUsage('haircut_image', 1);
           return imageBase64; // Return base64 image string
         }
         if (textResult != null) {
@@ -422,7 +462,7 @@ Return ONLY raw JSON. No markdown, no backticks.
         model: 'gemini-3.1-flash-lite',
         apiKey: _apiKey,
         systemInstruction: Content.system(
-            'You are Aura AI, a highly knowledgeable and supportive personal Lookmaxxing, Glow-up, and Aesthetics Coach. '
+            'You are GrowUp AI, a highly knowledgeable and supportive personal Lookmaxxing, Glow-up, and Aesthetics Coach. '
             'You give brief, encouraging, and highly specific advice on skin care, mewing, posture, etc. '
             'IMPORTANT RULE: You MUST write your entire response exclusively in the $language language.'
         ),
@@ -439,7 +479,9 @@ Return ONLY raw JSON. No markdown, no backticks.
       
       final text = response.text ?? 'Sorry, I could not generate a response.';
       final exactTokens = response.usageMetadata?.totalTokenCount;
-      final estimatedTokens = ((newMessage.length + text.length) / 4).round();
+      final estimatedTokens = exactTokens ?? ((newMessage.length + text.length) / 4).round();
+      
+      await _trackUsage('coach', exactTokens ?? estimatedTokens);
       
       return {
         'text': text,
@@ -451,6 +493,116 @@ Return ONLY raw JSON. No markdown, no backticks.
         'text': 'I am currently unavailable due to a network error. Please try again.',
         'tokens': 0,
       };
+    }
+  }
+
+  // ══ PERSONALIZED TASKS GENERATION ══════════════════════════════════════════
+
+  static String personalizedTasksSystemPrompt(String language) => '''
+You are GrowUp AI, an expert Lookmaxxing, Grooming, and Aesthetics Coach.
+Your task is to generate a highly personalized daily routine based on the user's age, gender, skin type, goals, and budget.
+
+IMPORTANT RULES:
+1. You MUST generate exactly 8 to 10 tasks in total, spread across morning, noon, evening, and night routines.
+2. The "desc" (description) MUST be extremely detailed (at least 2-3 sentences), explaining HOW to do the task and WHY it helps achieve their specific goals.
+3. You MUST write ALL text exclusively in the $language language.
+4. Return ONLY raw JSON. No markdown, no backticks.
+
+{
+  "morning_routine": [
+    {"title": "[Routine title in $language] 💧", "desc": "[Highly detailed description in $language]"}
+  ],
+  "noon_routine": [
+    {"title": "[Routine title in $language] ☀️", "desc": "[Highly detailed description in $language]"}
+  ],
+  "evening_routine": [
+    {"title": "[Routine title in $language] 🌇", "desc": "[Highly detailed description in $language]"}
+  ],
+  "night_routine": [
+    {"title": "[Routine title in $language] 🌌", "desc": "[Highly detailed description in $language]"}
+  ]
+}
+''';
+
+  static Future<Map<String, dynamic>> generatePersonalizedTasks({
+    required int age,
+    required String gender,
+    required String skinType,
+    required List<String> goals,
+    required String budget,
+    required String language,
+  }) async {
+    try {
+      final model = GenerativeModel(
+        model: 'gemini-3.1-flash-lite',
+        apiKey: _apiKey,
+        systemInstruction: Content.system(personalizedTasksSystemPrompt(language)),
+      );
+
+      final promptStr = 'Please generate my personalized daily routine. '
+          'My profile: Age: $age, Gender: $gender, Skin Type: $skinType, Budget: $budget, Goals: ${goals.join(", ")}.';
+      final prompt = Content.text(promptStr);
+
+      final response = await model.generateContent([prompt]);
+      final rawText = response.text ?? '';
+
+      final cleaned = rawText
+          .replaceAll('```json', '')
+          .replaceAll('```', '')
+          .trim();
+
+      final exactTokens = response.usageMetadata?.totalTokenCount;
+      final estimatedTokens = exactTokens ?? ((promptStr.length + rawText.length) / 4).round();
+      await _trackUsage('routine_generate', estimatedTokens);
+
+      return jsonDecode(cleaned) as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('GeminiService.generatePersonalizedTasks error: $e');
+      return {};
+    }
+  }
+
+  // ══ TEASER INSIGHT GENERATION ══════════════════════════════════════════════
+
+  static String teaserSystemPrompt(String language) => '''
+You are GrowUp AI, an expert Lookmaxxing, Grooming, and Psychological Profiler.
+The user has just completed a facial scan but hit a paywall before seeing their full report.
+Your task is to generate a SHORT, engaging, and highly psychological teaser paragraph (3-4 sentences max).
+
+IMPORTANT RULES:
+1. Briefly hint at their potential areas of improvement based on their goals or aura score (e.g., skin, jawline, symmetry) and mention an estimated timeframe to fix them (e.g., "With 30-45 days of consistent effort...").
+2. You MUST include a psychological hook stating that money is not a big deal, but how people look at you and perceive you matters the most in life.
+3. Encourage them to unlock PRO to get their fully personalized blueprint.
+4. You MUST write your entire response exclusively in the $language language.
+5. Return ONLY the plain text paragraph. Do not use quotes, markdown, or JSON.
+''';
+
+  static Future<String> generateTeaserInsight({
+    required double auraScore,
+    required List<String> goals,
+    required String language,
+  }) async {
+    try {
+      final model = GenerativeModel(
+        model: 'gemini-3.1-flash-lite',
+        apiKey: _apiKey,
+        systemInstruction: Content.system(teaserSystemPrompt(language)),
+      );
+
+      final promptStr = 'My Aura Score is ${auraScore.toStringAsFixed(1)} and my goals are: ${goals.join(", ")}. Please generate the psychological teaser.';
+      final prompt = Content.text(promptStr);
+
+      final response = await model.generateContent([prompt]);
+      final rawText = response.text?.trim() ?? '';
+
+      final exactTokens = response.usageMetadata?.totalTokenCount;
+      final estimatedTokens = exactTokens ?? ((promptStr.length + rawText.length) / 4).round();
+      await _trackUsage('teaser_generate', estimatedTokens);
+
+      return rawText;
+    } catch (e) {
+      debugPrint('GeminiService.generateTeaserInsight error: $e');
+      return 'Unlock PRO to reveal your full potential. Money is a secondary concern compared to how the world perceives you. Discover your tailored blueprint today.';
     }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,8 +9,8 @@ import '../../core/providers/user_provider.dart';
 import '../../core/providers/scan_history_provider.dart';
 import '../../core/providers/daily_progress_provider.dart';
 import '../../core/services/subscription_service.dart';
-import '../../core/services/sync_service.dart';
-import '../../core/services/local_db_service.dart';
+
+import '../../core/services/firestore_service.dart';
 import '../../core/services/backup_preference_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../scan/scan_detail_screen.dart';
@@ -72,12 +73,11 @@ class _AuthGateState extends ConsumerState<AuthGate>
       debugPrint('SubscriptionService init error: $e');
     }
 
-    // Background: push unsynced scans (fire and forget)
-    SyncService().syncPendingScans();
+    // Background sync is handled individually now.
 
     // ── Fetch user doc from Firestore ────────────────────────────────────────
     try {
-      final db = FirebaseFirestore.instance;
+      final db = FirebaseFirestore.instanceFor(app: Firebase.app(), databaseId: 'v2db');
 
       final doc = await db
           .collection('users')
@@ -132,7 +132,7 @@ class _AuthGateState extends ConsumerState<AuthGate>
           final int fsAge = data['age'] ?? 18;
           final double fsAuraScore =
               (data['aura_score'] as num?)?.toDouble() ?? 0.0;
-          final String fsCoachLanguage = data['coach_language'] ?? 'English';
+          final String fsCoachLanguage = data['language'] ?? data['coach_language'] ?? 'English';
 
           final userNotifier = ref.read(userStateProvider.notifier);
           await userNotifier.updateProfile(
@@ -159,7 +159,7 @@ class _AuthGateState extends ConsumerState<AuthGate>
       final String fsGender = data['gender'] ?? 'Male';
       final double fsAuraScore =
           (data['aura_score'] as num?)?.toDouble() ?? 0.0;
-      final String fsCoachLanguage = data['coach_language'] ?? 'English';
+      final String fsCoachLanguage = data['language'] ?? data['coach_language'] ?? 'English';
       final String? morningTime = data['aura_morning_time'];
       final String? noonTime = data['aura_noon_time'];
       final String? eveningTime = data['aura_evening_time'];
@@ -195,7 +195,7 @@ class _AuthGateState extends ConsumerState<AuthGate>
 
       // ── Sync Daily Progress ────────────────────────────────────────────────
       try {
-        final rawProgress = await SyncService().fetchRemoteDailyProgress();
+        final rawProgress = await FirestoreService().getUserDailyProgress(user.uid);
         if (rawProgress.isNotEmpty) {
           final mapped = rawProgress
               .map(
@@ -285,9 +285,9 @@ class _AuthGateState extends ConsumerState<AuthGate>
 
       if (!mounted) return;
 
-      // ── NOT PRO → Paywall ──────────────────────────────────────────────────
+      // ── NOT PRO → Locked Report Screen ─────────────────────────────────────
       if (!isPro) {
-        Navigator.of(context).pushReplacementNamed('/paywall');
+        Navigator.of(context).pushReplacementNamed('/locked-report');
         return;
       }
 
@@ -321,32 +321,19 @@ class _AuthGateState extends ConsumerState<AuthGate>
       }
 
       // ── PRO: Regular navigation based on scan history ──────────────────────
-      final localScans = await LocalDbService().getAllScans(user.uid);
+      final localScans = await FirestoreService().getUserScans(user.uid);
 
       if (localScans.isEmpty) {
-        // No local scans — try recovering from Firestore (new device)
-        final imported = await SyncService().fetchRemoteScans();
-        if (!mounted) return;
-
-        if (imported.isNotEmpty) {
-          ref.read(scanHistoryProvider.notifier).mergeImported(imported);
-
-          imported.sort((a, b) => b.date.compareTo(a.date));
-          final lastScanDate = imported.first.date;
-          final daysSince = DateTime.now().difference(lastScanDate).inDays;
-
-          if (daysSince >= 7) {
-            Navigator.of(context).pushReplacementNamed('/camera-scan');
-          } else {
-            Navigator.of(context).pushReplacementNamed('/dashboard');
-          }
-        } else {
-          Navigator.of(context).pushReplacementNamed('/camera-scan');
-        }
+        if (mounted) Navigator.of(context).pushReplacementNamed('/camera-scan');
       } else {
         if (!mounted) return;
-        final lastScanDateStr = localScans.first['date'] as String;
-        final lastScanDate = DateTime.parse(lastScanDateStr);
+        final lastScanDateData = localScans.first['scan_date'];
+        DateTime lastScanDate;
+        if (lastScanDateData is Timestamp) {
+          lastScanDate = lastScanDateData.toDate();
+        } else {
+          lastScanDate = DateTime.parse(lastScanDateData.toString());
+        }
         final daysSince = DateTime.now().difference(lastScanDate).inDays;
 
         if (daysSince >= 7) {
@@ -358,7 +345,18 @@ class _AuthGateState extends ConsumerState<AuthGate>
     } catch (e) {
       debugPrint('AuthGate routing error: $e');
       // Fallback: anything fails → send to auth
-      if (mounted) Navigator.of(context).pushReplacementNamed('/auth');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to sync: $e',
+              style: GoogleFonts.outfit(),
+            ),
+            backgroundColor: AppTheme.danger,
+          ),
+        );
+        Navigator.of(context).pushReplacementNamed('/auth');
+      }
     }
   }
 

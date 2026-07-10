@@ -20,6 +20,12 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   String _selectedGender = 'Male';
   bool _isSaving = false;
 
+  String _selectedSkinType = 'Oily';
+  final List<String> _skinTypes = ['Dry', 'Oily', 'Combination', 'Normal'];
+
+  String _selectedBudget = 'Basic';
+  final List<String> _budgets = ['Basic', 'Standard', 'Premium'];
+
   Future<void> _saveProfile() async {
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -39,6 +45,10 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           age: _selectedAge,
           gender: _selectedGender,
         );
+    await ref.read(userStateProvider.notifier).updateLifestyle(
+          skinType: _selectedSkinType,
+          budget: _selectedBudget,
+        );
 
     // Save to Firestore
     final user = FirebaseAuth.instance.currentUser;
@@ -48,6 +58,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           'display_name': _nameController.text.trim(),
           'age': _selectedAge,
           'gender': _selectedGender,
+          'skinType': _selectedSkinType,
+          'budget': _selectedBudget,
         });
       } catch (e) {
         debugPrint('Error saving profile to Firestore: $e');
@@ -59,6 +71,53 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       // Route to goals selection
       Navigator.of(context).pushNamed('/goals');
     }
+  }
+
+  Widget _buildSelectionChips(String title, List<String> options, String selectedValue, ValueChanged<String> onSelected) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.outfit(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 2.0,
+            color: AppTheme.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: options.map((option) {
+            final isSelected = option == selectedValue;
+            return GestureDetector(
+              onTap: () => onSelected(option),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppTheme.primary.withAlpha(50) : Colors.black38,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected ? AppTheme.primary : Colors.transparent,
+                    width: 1.5,
+                  ),
+                ),
+                child: Text(
+                  option,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 28),
+      ],
+    );
   }
 
   @override
@@ -232,6 +291,15 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                           });
                         },
                       ),
+                      const SizedBox(height: 28),
+                      
+                      _buildSelectionChips('WHAT IS YOUR SKIN TYPE?', _skinTypes, _selectedSkinType, (val) {
+                        setState(() => _selectedSkinType = val);
+                      }),
+
+                      _buildSelectionChips('WHAT IS YOUR BUDGET FOR PRODUCTS?', _budgets, _selectedBudget, (val) {
+                        setState(() => _selectedBudget = val);
+                      }),
                     ],
                   ),
                 ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -11,7 +12,7 @@ import '../../core/services/gemini_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/providers/scan_history_provider.dart';
 import '../../core/providers/user_provider.dart';
-import '../../core/services/sync_service.dart';
+import '../../core/services/backup_preference_service.dart';
 import '../../core/providers/habit_provider.dart';
 import '../../core/services/subscription_service.dart';
 import '../../core/services/firestore_service.dart';
@@ -177,7 +178,11 @@ class _ScanningProcessScreenState extends ConsumerState<ScanningProcessScreen>
       debugPrint('Analysis error: $e');
       if (mounted) {
         // Even on error, save demo data and proceed
-        await _storeScanResult(_demoData());
+        try {
+          await _storeScanResult(_demoData());
+        } catch (fallbackErr) {
+          debugPrint('Fallback store error: $fallbackErr');
+        }
         if (mounted) await _navigateAfterScan();
       }
     }
@@ -217,8 +222,8 @@ class _ScanningProcessScreenState extends ConsumerState<ScanningProcessScreen>
         Navigator.of(context).pushReplacementNamed('/dashboard');
       }
     } else {
-      // Free user — gate behind paywall
-      Navigator.of(context).pushReplacementNamed('/paywall');
+      // Free user — gate behind teaser / locked report screen
+      Navigator.of(context).pushReplacementNamed('/locked-report');
     }
   }
 
@@ -245,6 +250,16 @@ class _ScanningProcessScreenState extends ConsumerState<ScanningProcessScreen>
     final postureScore    = GeminiService.safeDouble(data['posture_score'], 65.0);
     final rating          = GeminiService.safeString(isMlKit ? comp['beautyCategory'] : data['rating'], ScanRecord.computeRating(overallScore));
 
+    // New Comprehensive Metrics
+    final faceShape = GeminiService.safeString(data['face_shape'], 'Oval');
+    final faceSymmetry = GeminiService.safeDouble(data['face_symmetry'], 80.0);
+    final skinHealthScore = GeminiService.safeDouble(data['skin_health_score'], 80.0);
+    final acneDetection = GeminiService.safeString(data['acne_detection'], 'Clear');
+    final faceAgeEstimation = (GeminiService.safeDouble(data['face_age_estimation'], 20.0)).toInt();
+    final darkCircles = GeminiService.safeString(data['dark_circles'], 'None');
+    final hairDensity = GeminiService.safeDouble(data['hair_density'], 80.0);
+    final overallAiFaceScore = GeminiService.safeDouble(data['overall_ai_face_score'], overallScore);
+
     final jawlineDetails   = GeminiService.safeMap(data['jawline_details']);
     final cheekboneDetails = GeminiService.safeMap(data['cheekbone_details']);
     final eyeDetails       = GeminiService.safeMap(data['eye_details']);
@@ -266,118 +281,74 @@ class _ScanningProcessScreenState extends ConsumerState<ScanningProcessScreen>
     // User requested Aura Score to be the Overall average score
     final auraScore100 = overallScore.clamp(0.0, 100.0);
 
-    // Build the full data map to store alongside local record
-    // so SyncService can push a complete payload to Firestore later.
-    final fullData = <String, dynamic>{
-      ...data,
-      'overall_score':     overallScore,
-      'aura_score':        auraScore,
-      'symmetry_score':    symmetryScore,
-      'golden_ratio_score': goldenRatio,
-      'cuteness_score':    cutenessScore,
-      'hotness_score':     hotnessScore,
-      'domination_score':  domScore,
-      'posture_score':     postureScore,
-      'rating':            rating,
-      'highlights':        highlights,
-      'suggestions':       suggestions,
-      'skin_details':      skinDetails,
-      'eye_details':       eyeDetails,
-    };
+    // ── 1. Upload Image to Storage OR Save Locally (Synchronous wait) ──────────
+    final imageBackupEnabled = BackupPreferenceService().isBackupEnabled;
+    String? finalImageUrl;
 
-    // ── 1. Save to LOCAL SQLite immediately (no network needed) ───────────────
-    final localRecord = ScanRecord(
-      id:           scanId,
-      date:         now,
-      auraScore:    auraScore100,
-      jawlineScore: symmetryScore,
-      skinScore:    GeminiService.safeDouble(skinDetails['texture'], 65.0),
-      eyeScore:     GeminiService.safeDouble(eyeDetails['alertness'], 65.0),
+    if (imageBackupEnabled && widget.imagePath != null && widget.imagePath!.isNotEmpty) {
+      finalImageUrl = await FirestoreService().uploadImage(widget.imagePath!, userId, scanId);
+    } else if (widget.imagePath != null && widget.imagePath!.isNotEmpty) {
+      try {
+        final docsDir = await getApplicationDocumentsDirectory();
+        final fileName = 'local_scan_$scanId.webp';
+        final savedFile = await File(widget.imagePath!).copy('${docsDir.path}/$fileName');
+        finalImageUrl = savedFile.path;
+      } catch (e) {
+        debugPrint('Error saving local image: $e');
+        finalImageUrl = widget.imagePath;
+      }
+    }
+
+    // ── 2. Save full report directly to Firestore ─────────────────────────────
+    await FirestoreService().saveScanRecord(
+      userId: userId,
+      scanId: scanId,
+      scanDate: now,
+      overallScore: overallScore,
+      auraScore: auraScore,
+      symmetryScore: symmetryScore,
+      goldenRatioScore: goldenRatio,
+      cutenessScore: cutenessScore,
+      hotnessScore: hotnessScore,
+      dominationScore: domScore,
       postureScore: postureScore,
-      rating:       rating,
-      highlights:   highlights.isNotEmpty ? highlights : ['Analysis complete'],
-      imageUrl:     widget.imagePath, // Keep local path locally
-      isSynced:     false,
+      rating: rating,
+      faceShape: faceShape,
+      faceSymmetry: faceSymmetry,
+      skinHealthScore: skinHealthScore,
+      acneDetection: acneDetection,
+      faceAgeEstimation: faceAgeEstimation,
+      darkCircles: darkCircles,
+      hairDensity: hairDensity,
+      overallAiFaceScore: overallAiFaceScore,
+      jawlineDetails: jawlineDetails,
+      cheekboneDetails: cheekboneDetails,
+      eyeDetails: eyeDetails,
+      noseDetails: noseDetails,
+      lipDetails: lipDetails,
+      chinDetails: chinDetails,
+      skinDetails: skinDetails,
+      highlights: highlights,
+      suggestions: suggestions,
+      imageUrl: finalImageUrl,
+      weekIndex: 0,
+      imageBackupEnabled: imageBackupEnabled,
     );
 
-    await ref.read(scanHistoryProvider.notifier).addScan(
-          localRecord,
-          fullData: fullData,
-        );
-    await ref.read(userStateProvider.notifier).updateAuraScore(auraScore100);
-    // Note: streak is managed exclusively by checkAndUpdateStreak() on app open (once per day).
+    // ── 3. Fetch fresh state from Firestore ────────────────────────────────────
+    if (mounted) {
+      await ref.read(scanHistoryProvider.notifier).loadHistory();
+    }
 
-    // ── 2. Set paywall_pending flag ───────────────────────────────────────────
+    // ── 4. Update local providers ──────────────────────────────────────────────
+    await ref.read(userStateProvider.notifier).updateAuraScore(auraScore100);
+
     final prefs = ref.read(sharedPreferencesProvider);
     await prefs.setBool('paywall_pending', true);
 
-    // ── 3. Save dynamic habits ────────────────────────────────────────────────
     final habits = GeminiService.parseRoutineJson(jsonEncode(data));
     if (habits.isNotEmpty) {
       await ref.read(habitProvider.notifier).replaceDynamicHabits(habits);
-    }
-
-    // ── 4. Background: upload image + Firestore sync (fire & forget) ──────────
-    _backgroundSyncScan(
-      userId:          userId,
-      scanId:          scanId,
-      scanDate:        now,
-      overallScore:    overallScore,
-      auraScore:       auraScore,
-      symmetryScore:   symmetryScore,
-      goldenRatio:     goldenRatio,
-      cutenessScore:   cutenessScore,
-      hotnessScore:    hotnessScore,
-      domScore:        domScore,
-      postureScore:    postureScore,
-      rating:          rating,
-      jawlineDetails:  jawlineDetails,
-      cheekboneDetails: cheekboneDetails,
-      eyeDetails:      eyeDetails,
-      noseDetails:     noseDetails,
-      lipDetails:      lipDetails,
-      chinDetails:     chinDetails,
-      skinDetails:     skinDetails,
-      highlights:      highlights,
-      suggestions:     suggestions,
-    );
-  }
-
-  /// Fire-and-forget background task: push
-  /// the full scan record to Firestore and mark local DB as synced.
-  Future<void> _backgroundSyncScan({
-    required String userId,
-    required String scanId,
-    required DateTime scanDate,
-    required double overallScore,
-    required double auraScore,
-    required double symmetryScore,
-    required double goldenRatio,
-    required double cutenessScore,
-    required double hotnessScore,
-    required double domScore,
-    required double postureScore,
-    required String rating,
-    required Map<String, dynamic> jawlineDetails,
-    required Map<String, dynamic> cheekboneDetails,
-    required Map<String, dynamic> eyeDetails,
-    required Map<String, dynamic> noseDetails,
-    required Map<String, dynamic> lipDetails,
-    required Map<String, dynamic> chinDetails,
-    required Map<String, dynamic> skinDetails,
-    required List<String> highlights,
-    required List<String> suggestions,
-  }) async {
-    try {
-      await SyncService().syncPendingScans();
-      debugPrint('_backgroundSyncScan: scan $scanId sync delegated to SyncService ✓');
-      
-      // Refresh the provider so the UI picks up the new Firebase Storage URL
-      if (mounted) {
-        await ref.read(scanHistoryProvider.notifier).loadHistory();
-      }
-    } catch (e) {
-      debugPrint('_backgroundSyncScan: error: $e');
     }
   }
 
@@ -385,7 +356,18 @@ class _ScanningProcessScreenState extends ConsumerState<ScanningProcessScreen>
         'aura_score': 68.5,
         'jawline_symmetry': 72,
         'skin_quality': 65,
-        'hair_density': 80,
+        'overall_score': 70.0,
+        
+        // Comprehensive metrics fallback
+        'face_shape': 'Diamond',
+        'face_symmetry': 82.5,
+        'skin_health_score': 78.0,
+        'acne_detection': 'Mild',
+        'face_age_estimation': 22,
+        'dark_circles': 'Slight',
+        'hair_density': 85.0,
+        'overall_ai_face_score': 88.0,
+
         'issues': [
           'Mild skin blemishes detected',
           'Slight jawline asymmetry',
@@ -421,7 +403,7 @@ class _ScanningProcessScreenState extends ConsumerState<ScanningProcessScreen>
                   child: Column(
                     children: [
                       Text(
-                        'AI AURA ENGINE',
+                        'GROWUP AI ENGINE',
                         style: GoogleFonts.outfit(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,

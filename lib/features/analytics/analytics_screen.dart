@@ -19,7 +19,7 @@ class AnalyticsScreen extends ConsumerStatefulWidget {
 class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   String _activeTab = 'structure'; // 'structure' | 'skin' | 'hair' | 'eyes'
   String _selectedMarkerMessage = 'Tap a glowing point on the face to inspect AI lookmaxxing suggestions.';
-  String _selectedMarkerTitle = 'AURA POINTER INSPECTOR';
+  String _selectedMarkerTitle = 'GrowUp AI POINTER INSPECTOR';
 
   List<Map<String, dynamic>> _getMarkers(Map<String, dynamic>? analyticsData, ScanRecord? scan) {
     double randomPos(String seedStr, int offset) {
@@ -119,62 +119,63 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Header back button
-                Row(
-                  children: [
-                    if (!widget.isTab)
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    Flexible(
-                      child: Text(
-                        'AI ANALYTICS',
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 2.0,
-                          color: Colors.white,
+                if (!widget.isTab)
+                  // Top Header back button
+                  Row(
+                    children: [
+                      if (!widget.isTab)
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                          onPressed: () => Navigator.of(context).pop(),
                         ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const Spacer(),
-                    // Scan History Button
-                    GestureDetector(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ScanHistoryScreen(),
+                      Flexible(
+                        child: Text(
+                          'AI ANALYTICS',
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2.0,
+                            color: Colors.white,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: AppTheme.secondary.withAlpha(25),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppTheme.secondary.withAlpha(80)),
+                      const Spacer(),
+                      // Scan History Button
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ScanHistoryScreen(),
+                          ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.history_rounded, color: AppTheme.secondary, size: 14),
-                            const SizedBox(width: 5),
-                            Text(
-                              'HISTORY',
-                              style: GoogleFonts.outfit(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.secondary,
-                                letterSpacing: 1.0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: AppTheme.secondary.withAlpha(25),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.secondary.withAlpha(80)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.history_rounded, color: AppTheme.secondary, size: 14),
+                              const SizedBox(width: 5),
+                              Text(
+                                'HISTORY',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.secondary,
+                                  letterSpacing: 1.0,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
                 if (latestScan != null) ...[
                   const SizedBox(height: 16),
                   GlassContainer(
@@ -369,7 +370,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
 
                 // Progress History Chart
                 Text(
-                  'AURA WEEKLY PROGRESS TRENDS',
+                  'GrowUp AI WEEKLY PROGRESS TRENDS',
                   style: GoogleFonts.outfit(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,

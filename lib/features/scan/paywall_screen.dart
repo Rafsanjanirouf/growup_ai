@@ -9,6 +9,7 @@ import '../../core/providers/user_provider.dart';
 import '../../core/services/subscription_service.dart';
 import '../../core/services/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/widgets/exit_survey_dialog.dart';
 
 /// Paywall screen — 100% RevenueCat dashboard driven.
 /// Shows RC's native PaywallView when offering is configured.
@@ -26,6 +27,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen>
   Offering? _offering;
   String? _errorMessage;
   int _retryCount = 0;
+  bool _canPop = false;
 
   late AnimationController _pulseCtrl;
   late Animation<double> _pulseAnim;
@@ -95,7 +97,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '🎉 Welcome to Aura Pro!',
+            '🎉 Welcome to GrowUp AI Pro!',
             style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
           ),
           backgroundColor: AppTheme.success,
@@ -126,35 +128,62 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen>
 
   @override
   Widget build(BuildContext context) {
+    return PopScope(
+      canPop: _canPop,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        final shouldPop = await showDialog<bool>(
+          context: context,
+          builder: (context) => const ExitSurveyDialog(
+            collectionName: 'prememership_complain',
+          ),
+        );
+
+        if (shouldPop == true) {
+          setState(() {
+            _canPop = true;
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              if (Navigator.canPop(context)) {
+                Navigator.of(context).pop();
+              } else {
+                Navigator.of(context).pushReplacementNamed('/dashboard');
+              }
+            }
+          });
+        }
+      },
+      child: _buildContent(context),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
     // ── Loading ──────────────────────────────────────────────────────────────
-    if (_loading) return const PopScope(canPop: false, child: _BeautifulPaywallLoader());
+    if (_loading) return const _BeautifulPaywallLoader();
 
     // ── RC PaywallView — the main path ───────────────────────────────────────
     if (_offering != null) {
-      return PopScope(
-        canPop: false,
-        child: PaywallView(
-          offering: _offering,
-          onPurchaseCompleted: (customerInfo, storeTransaction) async {
+      return PaywallView(
+        offering: _offering,
+        onPurchaseCompleted: (customerInfo, storeTransaction) async {
+          await _handleSuccess();
+        },
+        onRestoreCompleted: (customerInfo) async {
+          if (customerInfo.entitlements.active.containsKey(RCConfig.entitlement)) {
             await _handleSuccess();
-          },
-          onRestoreCompleted: (customerInfo) async {
-            if (customerInfo.entitlements.active.containsKey(RCConfig.entitlement)) {
-              await _handleSuccess();
-            }
-          },
-          onPurchaseError: (error) {
-            if (mounted) setState(() => _errorMessage = error.message);
-          },
-        ),
+          }
+        },
+        onPurchaseError: (error) {
+          if (mounted) setState(() => _errorMessage = error.message);
+        },
       );
     }
 
     // ── RC offering not configured yet — branded wait screen ─────────────────
-    return PopScope(canPop: false, child: _buildWaitScreen());
+    return _buildWaitScreen();
   }
-
-
 
   // ── Branded wait/error screen (RC not configured yet) ────────────────────
 
@@ -199,7 +228,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen>
                 const SizedBox(height: 32),
 
                 Text(
-                  'Aura Pro',
+                  'GrowUp AI Pro',
                   style: GoogleFonts.outfit(
                     fontSize: 30,
                     fontWeight: FontWeight.w900,
@@ -290,7 +319,7 @@ class _BeautifulPaywallLoaderState extends State<_BeautifulPaywallLoader>
 
   final List<String> _loadingTexts = [
     'Connecting to secure store services...',
-    'Retrieving Aura Pro premium plans...',
+    'Retrieving GrowUp AI Pro premium plans...',
     'Syncing subscription packages...',
     'Preparing premium layout...',
     'Securing checkout interface...',
@@ -415,7 +444,7 @@ class _BeautifulPaywallLoaderState extends State<_BeautifulPaywallLoader>
 
                   // Brand Loading Header
                   Text(
-                    'AURA PRO',
+                    'GrowUp AI PRO',
                     style: GoogleFonts.outfit(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,

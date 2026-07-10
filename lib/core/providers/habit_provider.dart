@@ -4,7 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'user_provider.dart';
 import 'daily_progress_provider.dart';
 import '../services/notification_service.dart';
-import '../services/sync_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/firestore_service.dart';
+import '../services/gemini_service.dart';
 import 'package:intl/intl.dart';
 
 class Habit {
@@ -152,6 +154,7 @@ class HabitStateNotifier extends StateNotifier<List<Habit>> {
     }).toList();
 
     await _saveHabits();
+    rescheduleReminders();
     final didIncrement = _checkAndIncrementStreak();
     await _syncToFirestore();
 
@@ -168,27 +171,48 @@ class HabitStateNotifier extends StateNotifier<List<Habit>> {
   Future<void> addCustomTask(Habit habit) async {
     state = [...state, habit];
     await _saveHabits();
+    rescheduleReminders();
     _ref.read(masterHabitProvider.notifier).addTask(habit);
   }
 
   Future<void> editTask(Habit updatedHabit) async {
     state = state.map((h) => h.id == updatedHabit.id ? updatedHabit : h).toList();
     await _saveHabits();
+    rescheduleReminders();
     _ref.read(masterHabitProvider.notifier).updateTask(updatedHabit);
   }
 
   Future<void> deleteTask(String id) async {
     state = state.where((h) => h.id != id).toList();
     await _saveHabits();
+    rescheduleReminders();
     _ref.read(masterHabitProvider.notifier).deleteTask(id);
   }
 
   Future<void> setDynamicHabits(List<Habit> dynamicHabits) async {
     state = dynamicHabits;
     await _saveHabits();
+    rescheduleReminders();
   }
 
   Future<void> replaceDynamicHabits(List<Habit> dynamicHabits) => setDynamicHabits(dynamicHabits);
+
+  Future<void> generateAITasks(UserState user) async {
+    final aiData = await GeminiService.generatePersonalizedTasks(
+      age: user.age,
+      gender: user.gender,
+      skinType: user.skinType,
+      goals: user.goals,
+      budget: user.budget,
+      language: user.coachLanguage,
+    );
+
+    if (aiData.isNotEmpty) {
+      await generateTasksFromScan(aiData);
+    } else {
+      await generateTasksFromScan(null); // fallback
+    }
+  }
 
   Future<void> generateTasksFromScan(Map<String, dynamic>? scanAnalyticsData) async {
     List<Habit> generatedTasks = [];
@@ -220,7 +244,7 @@ class HabitStateNotifier extends StateNotifier<List<Habit>> {
         Habit(id: 'f3', title: 'Mewing Session 👅', timeOfDay: 'noon', icon: 'wb_twilight', description: 'Mew for 15 minutes.', targetCount: 3),
         Habit(id: 'f6', title: 'Grooming Touch-up ✨', timeOfDay: 'evening', icon: 'wb_iridescent', description: 'Quick mirror check.', targetCount: 1),
         Habit(id: 'f4', title: 'Deep Purification Cleanse 🌌', timeOfDay: 'night', icon: 'cleaning_services', description: 'Wash away pollutants.', targetCount: 1),
-        Habit(id: 'f5', title: 'Aura Sleep Hygiene 💤', timeOfDay: 'night', icon: 'nights_stay', description: 'Ditch screens 30 mins before sleep.', targetCount: 1),
+        Habit(id: 'f5', title: 'GrowUp AI Sleep Hygiene 💤', timeOfDay: 'night', icon: 'nights_stay', description: 'Ditch screens 30 mins before sleep.', targetCount: 1),
       ];
     }
 
@@ -229,7 +253,7 @@ class HabitStateNotifier extends StateNotifier<List<Habit>> {
     // Save for Today
     state = [...generatedTasks, ...existingCustomTasks];
     await _saveHabits();
-    _scheduleReminders(state);
+    rescheduleReminders();
 
     // Save for Tomorrow
     final tomorrow = _currentDate.add(const Duration(days: 1));
@@ -263,6 +287,8 @@ class HabitStateNotifier extends StateNotifier<List<Habit>> {
     final nightTime = parseTime(userState.effectiveNightTime);
 
     for (var task in tasks) {
+      if (task.isCompleted) continue;
+
       DateTime? scheduleTime;
       if (task.timeOfDay == 'morning') {
         scheduleTime = morningTime;
@@ -294,8 +320,27 @@ class HabitStateNotifier extends StateNotifier<List<Habit>> {
   }
 
   Future<void> _syncToFirestore() async {
-    // This calls our new method in SyncService
-    await SyncService().syncDailyTasks(_currentDate, state);
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final tasksList = state.map((t) => {
+        'id': t.id,
+        'title': t.title,
+        'timeOfDay': t.timeOfDay,
+        'isCompleted': t.isCompleted,
+        'targetCount': t.targetCount,
+        'currentCount': t.currentCount,
+        'icon': t.icon,
+      }).toList();
+
+      await FirestoreService().saveDailyTasks(
+        userId: user.uid,
+        date: _currentDate,
+        tasksList: tasksList,
+      );
+    } catch (e) {
+      // ignore
+    }
   }
 
   /// Increments streak only once per calendar day.

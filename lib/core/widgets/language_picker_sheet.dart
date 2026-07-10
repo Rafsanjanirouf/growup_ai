@@ -70,7 +70,7 @@ class _LanguagePickerSheetState extends State<LanguagePickerSheet> {
                     ),
                   ),
                   Text(
-                    'AURA AI speaking language',
+                    'GrowUp AI speaking language',
                     style: GoogleFonts.outfit(
                         fontSize: 12, color: AppTheme.textSecondary),
                   ),

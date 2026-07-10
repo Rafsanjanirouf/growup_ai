@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/widgets/glass_container.dart';
 import '../../core/providers/user_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../core/services/firestore_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../core/services/backup_preference_service.dart';
-import '../../core/services/local_db_service.dart';
+import '../../core/services/firestore_service.dart';
+import '../../core/services/subscription_service.dart';
 
 class GoalSelectionScreen extends ConsumerStatefulWidget {
   const GoalSelectionScreen({super.key});
@@ -19,8 +20,6 @@ class GoalSelectionScreen extends ConsumerStatefulWidget {
 class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
   final List<String> _selectedGoals = [];
   final List<String> _selectedProblems = [];
-  String _selectedSkinType = 'Oily';
-  String _selectedBudget = 'Basic';
 
   final List<Map<String, String>> _availableGoals = [
     {'id': 'hair_growth', 'title': 'Hair Growth 💇‍♂️', 'desc': 'Stop hair fall & stimulate growth'},
@@ -81,10 +80,6 @@ class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
 
     // Save states to Riverpod
     ref.read(userStateProvider.notifier).updateGoals(_selectedGoals);
-    ref.read(userStateProvider.notifier).updateLifestyle(
-          skinType: _selectedSkinType,
-          budget: _selectedBudget,
-        );
     ref.read(userStateProvider.notifier).completeOnboarding();
 
     // Save to Firestore
@@ -94,9 +89,6 @@ class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
         await FirestoreService().updateUser(user.uid, {
           'goals': _selectedGoals,
           'problems': _selectedProblems,
-          'skinType': _selectedSkinType,
-          'skin_type': _selectedSkinType, // fallback
-          'budget': _selectedBudget,
           'language': 'English',
           'languageLocale': 'en-US',
           'profileCompleted': true,
@@ -113,11 +105,26 @@ class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
       final hasConsent = BackupPreferenceService().hasShownConsent;
       if (hasConsent) {
         if (user != null) {
-          final localScans = await LocalDbService().getAllScans(user.uid);
+          final localScans = await FirestoreService().getUserScans(user.uid);
           if (localScans.isNotEmpty) {
-            final lastScanDate = DateTime.parse(localScans.first['date'] as String);
+            final scanDateData = localScans.first['scan_date'];
+            DateTime lastScanDate;
+            if (scanDateData is Timestamp) {
+              lastScanDate = scanDateData.toDate();
+            } else {
+              lastScanDate = DateTime.parse(scanDateData.toString());
+            }
             if (DateTime.now().difference(lastScanDate).inDays < 7) {
-              if (mounted) Navigator.of(context).pushReplacementNamed('/dashboard');
+              bool isPro = false;
+              try {
+                isPro = await SubscriptionService().isProEntitled();
+              } catch (_) {}
+              if (!mounted) return;
+              if (isPro) {
+                Navigator.of(context).pushReplacementNamed('/dashboard');
+              } else {
+                Navigator.of(context).pushReplacementNamed('/locked-report');
+              }
               return;
             }
           }
@@ -127,6 +134,85 @@ class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
         if (mounted) Navigator.of(context).pushReplacementNamed('/backup-consent');
       }
     }
+  }
+
+  Widget _buildGridSelection({
+    required List<Map<String, String>> items,
+    required List<String> selectedItems,
+    required Function(String) onToggle,
+    required Color activeColor,
+  }) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: items.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.15,
+      ),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        final id = item['id']!;
+        final title = item['title']!;
+        final desc = item['desc']!;
+        final isSelected = selectedItems.contains(id);
+
+        return GestureDetector(
+          onTap: () => onToggle(id),
+          child: Container(
+            padding: const EdgeInsets.all(12.0),
+            decoration: BoxDecoration(
+              color: isSelected ? activeColor.withAlpha(40) : Colors.white.withAlpha(10),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isSelected ? activeColor : Colors.white.withAlpha(20),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Icon(
+                    isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                    color: isSelected ? activeColor : Colors.white24,
+                    size: 20,
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      desc,
+                      style: GoogleFonts.outfit(
+                        fontSize: 10,
+                        color: AppTheme.textSecondary,
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -172,61 +258,11 @@ class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Column(
-                  children: _availableGoals.map((g) {
-                    final id = g['id']!;
-                    final title = g['title']!;
-                    final desc = g['desc']!;
-                    final isSelected = _selectedGoals.contains(id);
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: GestureDetector(
-                        onTap: () => _toggleGoal(id),
-                        child: Container(
-                          padding: const EdgeInsets.all(16.0),
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppTheme.primary.withAlpha(40) : Colors.white.withAlpha(10),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isSelected ? AppTheme.primary : Colors.white.withAlpha(20),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      title,
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      desc,
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 12,
-                                        color: AppTheme.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(
-                                isSelected ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
-                                color: isSelected ? AppTheme.primary : Colors.white24,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                _buildGridSelection(
+                  items: _availableGoals,
+                  selectedItems: _selectedGoals,
+                  onToggle: _toggleGoal,
+                  activeColor: AppTheme.primary,
                 ),
                 const SizedBox(height: 24),
 
@@ -241,137 +277,14 @@ class _GoalSelectionScreenState extends ConsumerState<GoalSelectionScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Column(
-                  children: _availableProblems.map((p) {
-                    final id = p['id']!;
-                    final title = p['title']!;
-                    final desc = p['desc']!;
-                    final isSelected = _selectedProblems.contains(id);
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: GestureDetector(
-                        onTap: () => _toggleProblem(id),
-                        child: Container(
-                          padding: const EdgeInsets.all(16.0),
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppTheme.secondary.withAlpha(40) : Colors.white.withAlpha(10),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isSelected ? AppTheme.secondary : Colors.white.withAlpha(20),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      title,
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      desc,
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 12,
-                                        color: AppTheme.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(
-                                isSelected ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
-                                color: isSelected ? AppTheme.secondary : Colors.white24,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                _buildGridSelection(
+                  items: _availableProblems,
+                  selectedItems: _selectedProblems,
+                  onToggle: _toggleProblem,
+                  activeColor: AppTheme.secondary,
                 ),
                 const SizedBox(height: 24),
 
-                // Step 2: Skin & Budget
-                Text(
-                  'YOUR DETAILS',
-                  style: GoogleFonts.outfit(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2.0,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                GlassContainer(
-                  child: Column(
-                    children: [
-                      // Skin type dropdown
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Skin Type',
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          DropdownButton<String>(
-                            value: _selectedSkinType,
-                            dropdownColor: AppTheme.surface,
-                            underline: Container(),
-                            style: GoogleFonts.outfit(color: AppTheme.secondary, fontWeight: FontWeight.bold),
-                            items: ['Oily', 'Dry', 'Mixed'].map((t) {
-                              return DropdownMenuItem(value: t, child: Text(t));
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() => _selectedSkinType = val);
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                      const Divider(color: Colors.white12),
-                      // Budget Type
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Monthly Budget',
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          DropdownButton<String>(
-                            value: _selectedBudget,
-                            dropdownColor: AppTheme.surface,
-                            underline: Container(),
-                            style: GoogleFonts.outfit(color: AppTheme.secondary, fontWeight: FontWeight.bold),
-                            items: ['Basic', 'Premium'].map((b) {
-                              return DropdownMenuItem(value: b, child: Text(b));
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() => _selectedBudget = val);
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 40),
 
                 // Next Button
                 Container(

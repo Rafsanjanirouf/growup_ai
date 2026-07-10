@@ -1,6 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'dart:convert';
 
 /// Singleton-style Firestore service that writes to the default database.
 /// All collections follow the flat root-collection schema in database_schema.md.
@@ -9,17 +15,92 @@ class FirestoreService {
   factory FirestoreService() => _instance;
   FirestoreService._internal();
 
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instanceFor(app: Firebase.app(), databaseId: 'v2db');
 
   // ── Collection refs ─────────────────────────────────────────────────────────
   CollectionReference get _users => _db.collection('users');
   CollectionReference get _scanHistory => _db.collection('scan_history');
   CollectionReference get _habits => _db.collection('habits');
   CollectionReference get _dailyProg => _db.collection('daily_progress');
-  CollectionReference get _coachUsage => _db.collection('coach_usage');
   CollectionReference get _outfitHistory => _db.collection('outfit_history');
   CollectionReference get _hairstyleHistory => _db.collection('hairstyle_history');
   CollectionReference get _generationUsage => _db.collection('generation_usage');
+
+  // ══ UTILS ═══════════════════════════════════════════════════════════════════
+
+  Future<String?> uploadImage(
+    String imagePath,
+    String userId,
+    String scanId, {
+    String folder = 'scan_images',
+  }) async {
+    try {
+      final file = File(imagePath);
+      if (!file.existsSync()) {
+        debugPrint('FirestoreService: Local image file does not exist at $imagePath');
+        return null;
+      }
+
+      final tmpDir = await getTemporaryDirectory();
+      final targetPath = '${tmpDir.path}/${scanId}_compressed.webp';
+
+      final compressed = await FlutterImageCompress.compressAndGetFile(
+        imagePath,
+        targetPath,
+        format: CompressFormat.webp,
+        quality: 80,
+        minWidth: 800,
+        minHeight: 800,
+      );
+
+      if (compressed == null) {
+        debugPrint('FirestoreService: image compression returned null');
+        return null;
+      }
+
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child(folder)
+          .child(userId)
+          .child('$scanId.webp');
+
+      final uploadTask = storageRef.putFile(
+        File(compressed.path),
+        SettableMetadata(contentType: 'image/webp'),
+      );
+
+      final snapshot = await uploadTask;
+      return await snapshot.ref.getDownloadURL();
+    } catch (e) {
+      debugPrint('FirestoreService.uploadImage error: $e');
+      return null;
+    }
+  }
+
+  Future<String?> uploadBase64Image(String base64String, String userId, String scanId, String folder) async {
+    try {
+      final tmpDir = await getTemporaryDirectory();
+      final targetPath = '${tmpDir.path}/${scanId}_$folder.webp';
+      final file = File(targetPath);
+      await file.writeAsBytes(base64Decode(base64String));
+
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child(folder)
+          .child(userId)
+          .child('${scanId}_generated.webp');
+
+      final uploadTask = storageRef.putFile(
+        file,
+        SettableMetadata(contentType: 'image/webp'),
+      );
+      final snapshot = await uploadTask;
+      return await snapshot.ref.getDownloadURL();
+    } catch(e) {
+      debugPrint('FirestoreService.uploadBase64Image error: $e');
+      return null;
+    }
+  }
 
   // ══ USERS ═══════════════════════════════════════════════════════════════════
 
@@ -32,6 +113,7 @@ class FirestoreService {
     String deviceOs = '',
     String deviceBrand = '',
     String authProvider = 'auth-- email',
+    String fcmToken = '',
   }) async {
     try {
       final doc = await _users.doc(user.uid).get();
@@ -66,6 +148,7 @@ class FirestoreService {
           'block': false,
           'block_date': null,
           'block_reason': '',
+          'fcm_token': fcmToken,
           'created_at': FieldValue.serverTimestamp(),
           'updated_at': FieldValue.serverTimestamp(),
         });
@@ -87,6 +170,9 @@ class FirestoreService {
         if (user.photoURL != null && user.photoURL!.isNotEmpty) {
           updateData['photo_url'] = user.photoURL;
         }
+        if (user.email != null && user.email!.isNotEmpty) {
+          updateData['email'] = user.email;
+        }
         await _users.doc(user.uid).update(updateData);
       }
     } catch (e) {
@@ -99,10 +185,19 @@ class FirestoreService {
   Future<void> updateUser(String uid, Map<String, dynamic> data) async {
     try {
       data['updated_at'] = FieldValue.serverTimestamp();
-      await _users.doc(uid).update(data);
+      await _users.doc(uid).set(data, SetOptions(merge: true));
     } catch (e) {
       debugPrint('FirestoreService.updateUser error: $e');
       rethrow;
+    }
+  }
+
+  /// Updates FCM token for push notifications
+  Future<void> updateFcmToken(String uid, String token) async {
+    try {
+      await _users.doc(uid).update({'fcm_token': token});
+    } catch (e) {
+      debugPrint('FirestoreService.updateFcmToken error: $e');
     }
   }
 
@@ -215,6 +310,16 @@ class FirestoreService {
     required double postureScore,
     required String rating,
 
+    // New comprehensive metrics
+    required String faceShape,
+    required double faceSymmetry,
+    required double skinHealthScore,
+    required String acneDetection,
+    required int faceAgeEstimation,
+    required String darkCircles,
+    required double hairDensity,
+    required double overallAiFaceScore,
+
     // Detail JSON blocks
     required Map<String, dynamic> jawlineDetails,
     required Map<String, dynamic> cheekboneDetails,
@@ -249,6 +354,16 @@ class FirestoreService {
         'posture_score': postureScore,
         'rating': rating,
 
+        // Comprehensive metrics
+        'face_shape': faceShape,
+        'face_symmetry': faceSymmetry,
+        'skin_health_score': skinHealthScore,
+        'acne_detection': acneDetection,
+        'face_age_estimation': faceAgeEstimation,
+        'dark_circles': darkCircles,
+        'hair_density': hairDensity,
+        'overall_ai_face_score': overallAiFaceScore,
+
         'jawline_details': jawlineDetails,
         'cheekbone_details': cheekboneDetails,
         'eye_details': eyeDetails,
@@ -259,8 +374,7 @@ class FirestoreService {
 
         'highlights': highlights,
         'suggestions': suggestions,
-        // Only store image URL if backup is enabled
-        'image_url': imageBackupEnabled ? (imageUrl ?? '') : '',
+        'image_url': imageUrl ?? '',
         'image_backup_enabled': imageBackupEnabled,
         'week_index': weekIndex,
 
@@ -268,10 +382,10 @@ class FirestoreService {
       });
 
       // Also bump the user's aura_score + updated_at
-      await _users.doc(userId).update({
+      await _users.doc(userId).set({
         'aura_score': auraScore,
         'updated_at': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
     } catch (e) {
       debugPrint('FirestoreService.saveScanRecord error: $e');
       rethrow;
@@ -348,19 +462,33 @@ class FirestoreService {
     }
   }
 
+  /// Retrieves a user's daily progress history
+  Future<List<Map<String, dynamic>>> getUserDailyProgress(String userId) async {
+    try {
+      final snap = await _dailyProg
+          .where('user_id', isEqualTo: userId)
+          .orderBy('date_key', descending: true)
+          .get();
+      return snap.docs.map((d) => d.data() as Map<String, dynamic>).toList();
+    } catch (e) {
+      debugPrint('FirestoreService.getUserDailyProgress error: $e');
+      return [];
+    }
+  }
+
   // ══ AI COACH USAGE TRACKING ═════════════════════════════════════════════════
 
-  /// Retrieves the number of tokens used by the user on a specific day.
+  /// Retrieves the total number of tokens used by the user on a specific day.
   Future<int> getDailyTokenUsage({
     required String userId,
     required String dateKey,
   }) async {
     try {
       final docId = '${userId}_$dateKey';
-      final doc = await _coachUsage.doc(docId).get();
+      final doc = await _db.collection('ai_usage_tracking').doc(docId).get();
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
-        return (data['tokens_used'] as num?)?.toInt() ?? 0;
+        return (data['total_tokens_used'] as num?)?.toInt() ?? 0;
       }
       return 0;
     } catch (e) {
@@ -385,37 +513,65 @@ class FirestoreService {
     }
   }
 
-  /// Increments the daily tokens and message count for a user in `/coach_usage/{userId_dateKey}`.
-  /// Also aggregates global daily usage in `/daily_metrics/{dateKey}`.
-  Future<void> trackChatUsage({
+
+
+  // ══ AI USAGE TRACKING (ALL IN ONE) ═════════════════════════════════════════════════
+
+  /// Comprehensive AI token tracking using Batch Writes for instant Analytics.
+  Future<void> trackAiUsage({
     required String userId,
-    required String dateKey, // e.g., '2026-06-10'
+    required String dateKey,
+    required String category,
     required int tokensUsed,
   }) async {
     try {
-      // 1. Per-User Daily Tracking
-      final docId = '${userId}_$dateKey';
-      await _coachUsage.doc(docId).set({
-        'id': docId,
+      final batch = _db.batch();
+
+      // 1. User's Daily Usage (How much a user spent today and where)
+      final dailyUserRef = _db.collection('ai_usage_tracking').doc('${userId}_$dateKey');
+      batch.set(dailyUserRef, {
+        'id': '${userId}_$dateKey',
         'user_id': userId,
         'date_key': dateKey,
-        'tokens_used': FieldValue.increment(tokensUsed),
-        'message_count': FieldValue.increment(1),
+        'total_tokens_used': FieldValue.increment(tokensUsed),
+        'categories': {
+          category: FieldValue.increment(tokensUsed)
+        },
         'last_used_at': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      // 2. Global Daily Aggregation
-      await _db.collection('daily_metrics').doc(dateKey).set({
+      // 2. User's Lifetime Usage (Who is spending the most & where)
+      final userRef = _db.collection('users').doc(userId);
+      batch.set(userRef, {
+        'lifetime_tokens_used': FieldValue.increment(tokensUsed),
+        'ai_categories_usage': {
+          category: FieldValue.increment(tokensUsed)
+        }
+      }, SetOptions(merge: true));
+
+      // 3. Global Daily Usage (Which day costs the most & in which category)
+      final dailyGlobalRef = _db.collection('global_stats').doc('daily_$dateKey');
+      batch.set(dailyGlobalRef, {
         'date_key': dateKey,
         'total_tokens': FieldValue.increment(tokensUsed),
-        'total_inputs': FieldValue.increment(1),
-        'active_users': FieldValue.arrayUnion([
-          userId,
-        ]), // Array of unique user IDs
-        'updated_at': FieldValue.serverTimestamp(),
+        'categories': {
+          category: FieldValue.increment(tokensUsed)
+        }
       }, SetOptions(merge: true));
+
+      // 4. Global Lifetime Usage (Overall app token consumption)
+      final globalRef = _db.collection('global_stats').doc('lifetime_ai_usage');
+      batch.set(globalRef, {
+        'total_tokens': FieldValue.increment(tokensUsed),
+        'categories': {
+          category: FieldValue.increment(tokensUsed)
+        }
+      }, SetOptions(merge: true));
+
+      // Execute all 4 updates atomically
+      await batch.commit();
     } catch (e) {
-      debugPrint('FirestoreService.trackChatUsage error: $e');
+      debugPrint('FirestoreService.trackAiUsage error: $e');
     }
   }
 
@@ -594,6 +750,24 @@ class FirestoreService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getOutfitScans(String userId) async {
+    try {
+      final snapshot = await _outfitHistory.where('user_id', isEqualTo: userId).orderBy('date', descending: true).get();
+      return snapshot.docs.map((e) => e.data() as Map<String, dynamic>).toList();
+    } catch (e) {
+      debugPrint('FirestoreService.getOutfitScans error: $e');
+      return [];
+    }
+  }
+
+  Future<void> deleteOutfitRecord(String id) async {
+    try {
+      await _outfitHistory.doc(id).delete();
+    } catch (e) {
+      debugPrint('FirestoreService.deleteOutfitRecord error: $e');
+    }
+  }
+
   // ══ HAIRSTYLE HISTORY ══════════════════════════════════════════════════════════
 
   Future<void> saveHairStyleRecord({
@@ -616,6 +790,24 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('FirestoreService.saveHairStyleRecord error: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getHairStyleScans(String userId) async {
+    try {
+      final snapshot = await _hairstyleHistory.where('user_id', isEqualTo: userId).orderBy('date', descending: true).get();
+      return snapshot.docs.map((e) => e.data() as Map<String, dynamic>).toList();
+    } catch (e) {
+      debugPrint('FirestoreService.getHairStyleScans error: $e');
+      return [];
+    }
+  }
+
+  Future<void> deleteHairStyleRecord(String id) async {
+    try {
+      await _hairstyleHistory.doc(id).delete();
+    } catch (e) {
+      debugPrint('FirestoreService.deleteHairStyleRecord error: $e');
     }
   }
 
@@ -643,6 +835,133 @@ class FirestoreService {
       }, SetOptions(merge: true));
     } catch (e) {
       debugPrint('FirestoreService.saveDailyTasks error: $e');
+      rethrow;
+    }
+  }
+
+  // ══ CHAT SESSIONS & MESSAGES ═══════════════════════════════════════════════
+
+  Future<void> createChatSession({
+    required String userId,
+    required String sessionId,
+    required String title,
+    required DateTime updatedAt,
+  }) async {
+    try {
+      await _users.doc(userId).collection('chat_sessions').doc(sessionId).set({
+        'id': sessionId,
+        'title': title,
+        'updated_at': Timestamp.fromDate(updatedAt),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('FirestoreService.createChatSession error: $e');
+    }
+  }
+
+  Future<void> updateChatSessionDate(String userId, String sessionId, DateTime updatedAt) async {
+    try {
+      await _users.doc(userId).collection('chat_sessions').doc(sessionId).update({
+        'updated_at': Timestamp.fromDate(updatedAt),
+      });
+    } catch (e) {
+      debugPrint('FirestoreService.updateChatSessionDate error: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getChatSessions(String userId) async {
+    try {
+      final snapshot = await _users
+          .doc(userId)
+          .collection('chat_sessions')
+          .orderBy('updated_at', descending: true)
+          .get();
+      return snapshot.docs.map((e) => e.data()).toList();
+    } catch (e) {
+      debugPrint('FirestoreService.getChatSessions error: $e');
+      return [];
+    }
+  }
+
+  Future<void> deleteChatSession(String userId, String sessionId) async {
+    try {
+      final messages = await _users
+          .doc(userId)
+          .collection('chat_sessions')
+          .doc(sessionId)
+          .collection('messages')
+          .get();
+      final batch = _db.batch();
+      for (final doc in messages.docs) {
+        batch.delete(doc.reference);
+      }
+      batch.delete(_users.doc(userId).collection('chat_sessions').doc(sessionId));
+      await batch.commit();
+    } catch (e) {
+      debugPrint('FirestoreService.deleteChatSession error: $e');
+    }
+  }
+
+  Future<void> saveChatMessage({
+    required String userId,
+    required String sessionId,
+    required String messageId,
+    required String text,
+    required bool isUser,
+    required DateTime timestamp,
+  }) async {
+    try {
+      await _users
+          .doc(userId)
+          .collection('chat_sessions')
+          .doc(sessionId)
+          .collection('messages')
+          .doc(messageId)
+          .set({
+        'id': messageId,
+        'text': text,
+        'is_user': isUser,
+        'timestamp': Timestamp.fromDate(timestamp),
+      });
+    } catch (e) {
+      debugPrint('FirestoreService.saveChatMessage error: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getChatMessages(String userId, String sessionId) async {
+    try {
+      final snapshot = await _users
+          .doc(userId)
+          .collection('chat_sessions')
+          .doc(sessionId)
+          .collection('messages')
+          .orderBy('timestamp', descending: false)
+          .get();
+      return snapshot.docs.map((e) => e.data()).toList();
+    } catch (e) {
+      debugPrint('FirestoreService.getChatMessages error: $e');
+      return [];
+    }
+  }
+
+  // ══ EXIT SURVEYS ═══════════════════════════════════════════════════════════
+
+  /// Saves an exit survey to a specific collection (e.g. 'prememership complain' or 'pree scan')
+  Future<void> saveExitSurvey({
+    required String userId,
+    required String collectionName,
+    required List<String> reasons,
+    required String customText,
+  }) async {
+    try {
+      await _db.collection(collectionName).doc(userId).set({
+        'user_id': userId,
+        'reasons': reasons,
+        'custom_text': customText,
+        'timestamp': FieldValue.serverTimestamp(),
+        'complaint_count': FieldValue.increment(1),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('FirestoreService.saveExitSurvey error: $e');
       rethrow;
     }
   }

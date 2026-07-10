@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../config/api_keys.dart';
@@ -85,7 +86,7 @@ class SubscriptionService {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final db = FirebaseFirestore.instance;
+        final db = FirebaseFirestore.instanceFor(app: Firebase.app(), databaseId: 'v2db');
         final subDoc = await db.collection('subscription').doc(user.uid).get();
         if (subDoc.exists) {
           final data = subDoc.data() as Map<String, dynamic>;

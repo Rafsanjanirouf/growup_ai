@@ -109,7 +109,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'AURA',
+                          'GrowUp',
                           style: GoogleFonts.outfit(
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
@@ -184,7 +184,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                               // Tagline
                               Text(
-                                'Chisel Your Face\nElevate Your Aura',
+                                'Chisel Your Face\nElevate Your Glow-Up',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.outfit(
                                   fontSize: 28,

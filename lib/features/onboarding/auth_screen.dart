@@ -131,7 +131,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'AURA',
+                        'GrowUp AI',
                         style: GoogleFonts.outfit(
                           fontSize: 32,
                           fontWeight: FontWeight.w900,

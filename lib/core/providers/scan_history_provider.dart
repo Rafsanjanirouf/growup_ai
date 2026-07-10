@@ -1,7 +1,7 @@
-import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/local_db_service.dart';
+import '../services/firestore_service.dart';
 import 'user_provider.dart';
 
 // ─── Data Model ───────────────────────────────────────────────────────────────
@@ -14,6 +14,17 @@ class ScanRecord {
   final double skinScore;
   final double eyeScore;
   final double postureScore;
+  
+  // New comprehensive metrics
+  final String faceShape;
+  final double faceSymmetry;
+  final double skinHealthScore;
+  final String acneDetection;
+  final int faceAgeEstimation;
+  final String darkCircles;
+  final double hairDensity;
+  final double overallAiFaceScore;
+
   final String rating; // 'Legendary' | 'Elite' | 'Rising' | 'Developing'
   final List<String> highlights; // top AI insights
   final String? imageUrl; // Firebase Storage URL (nullable — may not exist)
@@ -33,6 +44,17 @@ class ScanRecord {
     required this.skinScore,
     required this.eyeScore,
     required this.postureScore,
+
+    // Comprehensive metrics
+    this.faceShape = 'Oval',
+    this.faceSymmetry = 0.0,
+    this.skinHealthScore = 0.0,
+    this.acneDetection = 'Clear',
+    this.faceAgeEstimation = 20,
+    this.darkCircles = 'None',
+    this.hairDensity = 0.0,
+    this.overallAiFaceScore = 0.0,
+
     required this.rating,
     required this.highlights,
     this.imageUrl,
@@ -61,29 +83,41 @@ class ScanRecord {
     return 'Developing';
   }
 
-  /// Build from a SQLite row map.
-  factory ScanRecord.fromSqlite(Map<String, dynamic> row) => ScanRecord(
-        id:           row['id'] as String,
-        date:         DateTime.parse(row['date'] as String),
-        auraScore:    (row['aura_score'] as num).toDouble(),
-        jawlineScore: (row['jawline_score'] as num).toDouble(),
-        skinScore:    (row['skin_score'] as num).toDouble(),
-        eyeScore:     (row['eye_score'] as num).toDouble(),
-        postureScore: (row['posture_score'] as num).toDouble(),
-        rating:       row['rating'] as String,
-        highlights:   LocalDbService.parseHighlights(row['highlights']),
-        imageUrl:     row['image_url'] as String?,
-        weekIndex:    (row['week_index'] as int?) ?? 0,
-        fullData:     row['full_data'] != null ? _parseFullData(row['full_data'] as String) : null,
-        isSynced:     (row['is_synced'] as int? ?? 0) == 1,
-      );
-
-  static Map<String, dynamic>? _parseFullData(String source) {
-    try {
-      return jsonDecode(source) as Map<String, dynamic>;
-    } catch (e) {
-      return null;
+  /// Build from a Firestore document data.
+  factory ScanRecord.fromFirestore(Map<String, dynamic> data) {
+    DateTime d;
+    if (data['scan_date'] is Timestamp) {
+      d = (data['scan_date'] as Timestamp).toDate();
+    } else {
+      d = DateTime.parse(data['scan_date'].toString());
     }
+
+    return ScanRecord(
+      id:           data['id'] as String,
+      date:         d,
+      auraScore:    ((data['aura_score'] as num?) ?? 0).toDouble() * 10, // Convert 0-10 scale back to 0-100 for display
+      jawlineScore: ((data['symmetry_score'] as num?) ?? 0).toDouble(),
+      skinScore:    ((data['skin_details']?['texture'] as num?) ?? 0).toDouble(),
+      eyeScore:     ((data['eye_details']?['alertness'] as num?) ?? 0).toDouble(),
+      postureScore: ((data['posture_score'] as num?) ?? 0).toDouble(),
+      
+      // Comprehensive metrics
+      faceShape:          data['face_shape'] as String? ?? 'Oval',
+      faceSymmetry:       ((data['face_symmetry'] as num?) ?? 0).toDouble(),
+      skinHealthScore:    ((data['skin_health_score'] as num?) ?? 0).toDouble(),
+      acneDetection:      data['acne_detection'] as String? ?? 'Clear',
+      faceAgeEstimation:  (data['face_age_estimation'] as num?)?.toInt() ?? 20,
+      darkCircles:        data['dark_circles'] as String? ?? 'None',
+      hairDensity:        ((data['hair_density'] as num?) ?? 0).toDouble(),
+      overallAiFaceScore: ((data['overall_ai_face_score'] as num?) ?? 0).toDouble(),
+
+      rating:       data['rating'] as String? ?? '',
+      highlights:   List<String>.from(data['highlights'] ?? []),
+      imageUrl:     data['image_url'] as String?,
+      weekIndex:    (data['week_index'] as int?) ?? 0,
+      fullData:     data,
+      isSynced:     true,
+    );
   }
 }
 
@@ -96,46 +130,22 @@ class ScanHistoryNotifier extends StateNotifier<List<ScanRecord>> {
     loadHistory();
   }
 
-  final LocalDbService _localDb = LocalDbService();
+  final FirestoreService _firestore = FirestoreService();
 
   Future<void> loadHistory() async {
     try {
-      final userId = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
-      final rows = await _localDb.getAllScans(userId);
-      state = rows.map(ScanRecord.fromSqlite).toList();
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
+      final docs = await _firestore.getUserScans(userId);
+      state = docs.map(ScanRecord.fromFirestore).toList();
     } catch (e) {
       state = [];
     }
   }
 
-  /// Insert a new scan into SQLite immediately (local-first).
-  /// Pass [fullData] so SyncService can later push the full Gemini payload.
-  Future<void> addScan(
-    ScanRecord record, {
-    Map<String, dynamic>? fullData,
-  }) async {
-    final userId = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
-    await _localDb.insertScan(
-      id:           record.id,
-      userId:       userId,
-      date:         record.date,
-      auraScore:    record.auraScore,
-      jawlineScore: record.jawlineScore,
-      skinScore:    record.skinScore,
-      eyeScore:     record.eyeScore,
-      postureScore: record.postureScore,
-      rating:       record.rating,
-      highlights:   record.highlights,
-      imageUrl:     record.imageUrl,
-      isSynced:     false,
-      fullData:     fullData,
-    );
-    // Prepend to in-memory state (newest first) without re-reading DB
-    state = [record, ...state];
-  }
+  // Direct Firestore saving is handled by ScanningProcessScreen synchronously.
+  // After saving, loadHistory() is called to refresh state.
 
-  /// Called by SyncService after remote records are imported.
-  /// Merges them into state without duplicates.
   void mergeImported(List<ScanRecord> imported) {
     if (imported.isEmpty) return;
     final existingIds = state.map((s) => s.id).toSet();

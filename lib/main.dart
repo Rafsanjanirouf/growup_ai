@@ -23,6 +23,7 @@ import 'features/onboarding/backup_consent_screen.dart';
 import 'features/scan/camera_scan_screen.dart';
 import 'features/scan/scanning_process_screen.dart';
 import 'features/scan/paywall_screen.dart';
+import 'features/scan/locked_report_screen.dart';
 
 // Dashboard, Analytics & Profile Screens
 import 'features/dashboard/dashboard_screen.dart';
@@ -31,11 +32,20 @@ import 'features/profile/profile_screen.dart';
 import 'features/profile/backup_settings_screen.dart';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  debugPrint("Handling a background message: ${message.messageId}");
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  
   final prefs = await SharedPreferences.getInstance();
   await BackupPreferenceService().init(prefs);
 
@@ -64,7 +74,7 @@ class GrowUpAIApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Aura Lookmaxxing',
+      title: 'GrowUp AI Lookmaxxing',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       themeMode: ThemeMode.dark,
@@ -79,6 +89,7 @@ class GrowUpAIApp extends StatelessWidget {
         '/camera-scan': (context) => const CameraScanScreen(),
         '/scanning-process': (context) => const ScanningProcessScreen(),
         '/paywall': (context) => const PaywallScreen(),
+        '/locked-report': (context) => const LockedReportScreen(),
         '/dashboard': (context) => const DashboardScreen(),
         '/analytics': (context) => const AnalyticsScreen(),
         '/profile': (context) => const ProfileScreen(),

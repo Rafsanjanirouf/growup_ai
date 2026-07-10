@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/providers/scan_history_provider.dart';
+import '../share/glow_up_share_screen.dart';
 import 'scan_detail_screen.dart';
 
 class ScanHistoryScreen extends ConsumerStatefulWidget {
@@ -121,45 +122,45 @@ class _ScanHistoryScreenState extends ConsumerState<ScanHistoryScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              if (!widget.isTab) ...[
+          if (!widget.isTab) ...[
+            Row(
+              children: [
                 IconButton(
                   icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
                   padding: EdgeInsets.zero,
                   onPressed: () => Navigator.pop(context),
                 ),
                 const SizedBox(width: 4),
-              ],
-              Text(
-                'SCAN HISTORY',
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 2.5,
-                  color: Colors.white,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withAlpha(30),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppTheme.primary.withAlpha(100)),
-                ),
-                child: Text(
-                  '${scans.length} Scans',
+                Text(
+                  'SCAN HISTORY',
                   style: GoogleFonts.outfit(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2.5,
+                    color: Colors.white,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withAlpha(30),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppTheme.primary.withAlpha(100)),
+                  ),
+                  child: Text(
+                    '${scans.length} Scans',
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
           if (scans.length >= 2) ...[
             Row(
               children: [
@@ -263,7 +264,8 @@ class _ScanHistoryScreenState extends ConsumerState<ScanHistoryScreen>
           ...group.scans.reversed.map((scan) {
             final older = allScans.where((s) => s.date.isBefore(scan.date)).toList();
             final previousScan = older.isNotEmpty ? (older..sort((a, b) => b.date.compareTo(a.date))).first : null;
-            return _buildScanCard(scan, previousScan);
+            final scanIndex = allScans.indexOf(scan);
+            return _buildScanCard(scan, previousScan, scanIndex);
           }),
         ],
       ),
@@ -294,7 +296,7 @@ class _ScanHistoryScreenState extends ConsumerState<ScanHistoryScreen>
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: bestScore / 100,
+                    value: bestScore > 10.0 ? bestScore / 100 : bestScore / 10.0,
                     minHeight: 6,
                     backgroundColor: Colors.white12,
                     valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
@@ -331,7 +333,7 @@ class _ScanHistoryScreenState extends ConsumerState<ScanHistoryScreen>
   }
 
   // ─── Single Scan Card ───────────────────────────────────────────────────────
-  Widget _buildScanCard(ScanRecord scan, ScanRecord? previousScan) {
+  Widget _buildScanCard(ScanRecord scan, ScanRecord? previousScan, int index) {
     final delta       = previousScan != null ? scan.auraScore - previousScan.auraScore : null;
     final ratingColor = _ratingColor(scan.rating);
 
@@ -339,96 +341,189 @@ class _ScanHistoryScreenState extends ConsumerState<ScanHistoryScreen>
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ScanDetailScreen(scan: scan, previousScan: previousScan),
+          builder: (_) => ScanDetailScreen(scan: scan, previousScan: previousScan, fromHistory: true),
         ),
       ),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white.withAlpha(8),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: ratingColor.withAlpha(60), width: 1),
+          gradient: LinearGradient(
+            colors: [
+              ratingColor.withAlpha(20),
+              Colors.black.withAlpha(80),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: ratingColor.withAlpha(80), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: ratingColor.withAlpha(20),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: ratingColor.withAlpha(30),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
-        child: Row(
+        child: Column(
           children: [
-            // Scan thumbnail (black placeholder if no image)
-            _buildThumbnail(scan.imageUrl),
-            const SizedBox(width: 14),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Scan thumbnail
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white24, width: 1),
+                  ),
+                  child: _buildThumbnail(scan.imageUrl),
+                ),
+                const SizedBox(width: 16),
 
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          DateFormat('EEE, d MMM').format(scan.date),
-                          style: GoogleFonts.outfit(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      _buildRatingBadge(scan.rating, ratingColor),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    DateFormat('hh:mm a · yyyy').format(scan.date),
-                    style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38),
-                  ),
-                  if (delta != null) ...[
-                    const SizedBox(height: 5),
-                    _buildDeltaBadge(delta),
-                  ],
-                  const SizedBox(height: 10),
-                  // Mini stats bar
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildMiniStat('📐', 'Jaw', scan.jawlineScore),
-                      _buildMiniStat('✨', 'Skin', scan.skinScore),
-                      _buildMiniStat('👁️', 'Eyes', scan.eyeScore),
-                      _buildMiniStat('🏋️', 'Post', scan.postureScore),
-                      // Big aura score
-                      Column(
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('⚡', style: const TextStyle(fontSize: 10)),
-                          Text(
-                            scan.auraScore.toStringAsFixed(0),
-                            style: GoogleFonts.outfit(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                              color: ratingColor,
+                          Expanded(
+                            child: Text(
+                              DateFormat('EEE, d MMM yyyy').format(scan.date),
+                              style: GoogleFonts.outfit(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          _buildRatingBadge(scan.rating, ratingColor),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        DateFormat('hh:mm a').format(scan.date),
+                        style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'AURA SCORE',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.5,
+                                  color: ratingColor,
+                                ),
+                              ),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    scan.auraScore.toStringAsFixed(1),
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      height: 1.0,
+                                    ),
+                                  ),
+                                  if (delta != null) ...[
+                                    const SizedBox(width: 8),
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: _buildDeltaBadge(delta),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ),
+                          const Spacer(),
+                          const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 16),
                         ],
                       ),
                     ],
                   ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.black.withAlpha(60),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildMiniStat('📐', 'Jaw', scan.jawlineScore),
+                  _buildMiniStat('✨', 'Skin', scan.skinScore),
+                  _buildMiniStat('👁️', 'Eyes', scan.eyeScore),
+                  _buildMiniStat('🏋️', 'Post', scan.postureScore),
+                  Container(
+                    height: 30,
+                    width: 1,
+                    color: Colors.white12,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => GlowUpShareScreen(initialIndex: index),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [ratingColor, ratingColor.withAlpha(200)],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: ratingColor.withAlpha(60),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.ios_share_rounded, color: Colors.black, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Card',
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(width: 4),
-            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 14),
           ],
         ),
       ),
     );
   }
 
-  /// Shows scan thumbnail if image URL exists (local or cloud), otherwise shows a clean black box.
   Widget _buildThumbnail(String? imageUrl) {
     if (imageUrl == null || imageUrl.isEmpty) {
       return _blackBox();
@@ -437,10 +532,10 @@ class _ScanHistoryScreenState extends ConsumerState<ScanHistoryScreen>
     final isNetwork = imageUrl.startsWith('http://') || imageUrl.startsWith('https://');
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: SizedBox(
-        width: 58,
-        height: 68,
+        width: 72,
+        height: 84,
         child: isNetwork
             ? Image.network(
                 imageUrl,
@@ -454,7 +549,7 @@ class _ScanHistoryScreenState extends ConsumerState<ScanHistoryScreen>
             : Image.file(
                 File(imageUrl),
                 fit: BoxFit.cover,
-                cacheWidth: 150, // Resizes before decoding to fix frame drops
+                cacheWidth: 200, // Resizes before decoding to fix frame drops
                 errorBuilder: (ctx, e, st) => _blackBox(),
               ),
       ),

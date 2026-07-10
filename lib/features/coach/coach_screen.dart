@@ -8,11 +8,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/services/local_db_service.dart';
+
 import '../../core/services/firestore_service.dart';
 import '../../core/services/gemini_service.dart';
 import '../../core/widgets/language_picker_sheet.dart';
+import '../../core/widgets/usage_limit_progress_bar.dart';
 import 'chat_history_screen.dart';
 
 class ChatMessage {
@@ -44,6 +46,9 @@ class _AICoachScreenState extends State<AICoachScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
   String? _currentSessionId;
+
+  int _usedTokens = 0;
+  int _tokenLimit = 0;
 
   String _selectedLanguage = 'English';
   final List<String> _languages = ['English', 'Bengali', 'Hindi'];
@@ -80,12 +85,26 @@ class _AICoachScreenState extends State<AICoachScreen> {
       }
     }
 
+    if (user != null) {
+      final dateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final used = await FirestoreService().getDailyTokenUsage(userId: user.uid, dateKey: dateKey);
+      final limit = await FirestoreService().getDailyTokenLimit();
+      if (mounted) {
+        setState(() {
+          _usedTokens = used;
+          _tokenLimit = limit;
+        });
+      }
+    }
+
     // 2. Load latest session if none provided
     if (widget.sessionId != null) {
       _currentSessionId = widget.sessionId;
       await _loadMessages();
     } else {
-      final sessions = await LocalDbService().getChatSessions();
+      final user = FirebaseAuth.instance.currentUser;
+      final userId = user?.uid ?? 'guest';
+      final sessions = await FirestoreService().getChatSessions(userId);
       if (sessions.isNotEmpty) {
         _currentSessionId = sessions.first['id'] as String;
         await _loadMessages();
@@ -176,7 +195,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
       _messages.add(
         ChatMessage(
           id: const Uuid().v4(),
-          text: "Salutations, lookmaxxer! 🤖\n\nI am Aura AI, your personal Lookmaxxing & Glow-up Coach. Ask me anything about Mewing techniques, skin textures, postures, or masseter muscle conditioning!",
+          text: "Salutations, lookmaxxer! 🤖\n\nI am GrowUp AI, your personal Lookmaxxing & Glow-up Coach. Ask me anything about Mewing techniques, skin textures, postures, or masseter muscle conditioning!",
           isUser: false,
           timestamp: DateTime.now(),
         ),
@@ -186,18 +205,25 @@ class _AICoachScreenState extends State<AICoachScreen> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final scans = await LocalDbService().getAllScans(user.uid);
+        final scans = await FirestoreService().getUserScans(user.uid);
         if (scans.isNotEmpty) {
           final latest = scans.first;
-          final auraScore = (latest['aura_score'] as num).toDouble().toStringAsFixed(1);
-          final skinScore = (latest['skin_score'] as num).toDouble().toStringAsFixed(1);
-          final jawlineScore = (latest['jawline_score'] as num).toDouble().toStringAsFixed(1);
+          final auraScoreNum = (latest['aura_score'] as num?) ?? 0;
+          final auraScore = auraScoreNum.toDouble().toStringAsFixed(1);
+          
+          final skinDetails = latest['skin_details'] as Map<String, dynamic>?;
+          final skinScoreNum = (skinDetails?['texture'] as num?) ?? 0;
+          final skinScore = skinScoreNum.toDouble().toStringAsFixed(1);
+          
+          final jawlineScoreNum = (latest['symmetry_score'] as num?) ?? 0;
+          final jawlineScore = jawlineScoreNum.toDouble().toStringAsFixed(1);
+          
           final rating = latest['rating'] as String? ?? 'Developing';
 
           final reportText = "Here is a quick look at your latest analysis:\n\n"
               "**Aura Score**: $auraScore ($rating)\n"
               "**Skin Score**: $skinScore\n"
-              "**Jawline Score**: $jawlineScore\n\n"
+              "**Symmetry Score**: $jawlineScore\n\n"
               "Would you like me to analyze this further or give you personalized tips to improve these scores?";
 
           if (mounted) {
@@ -237,7 +263,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'AURA AI SETTINGS',
+                      'GrowUp AI SETTINGS',
                       style: GoogleFonts.outfit(
                         color: Colors.white,
                         fontSize: 18,
@@ -245,7 +271,16 @@ class _AICoachScreenState extends State<AICoachScreen> {
                         letterSpacing: 1.5,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
+                    
+                    // Token Usage limit bar in Settings
+                    UsageLimitProgressBar(
+                      title: 'Daily AI Tokens',
+                      used: _usedTokens,
+                      limit: _tokenLimit,
+                      icon: Icons.auto_awesome,
+                    ),
+                    const SizedBox(height: 16),
                     
                     // History
                     ListTile(
@@ -281,7 +316,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
                       contentPadding: EdgeInsets.zero,
                       activeThumbColor: AppTheme.primary,
                       title: Text('Auto Voice Playback', style: GoogleFonts.outfit(color: Colors.white, fontSize: 16)),
-                      subtitle: Text('AURA AI will read replies aloud', style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12)),
+                      subtitle: Text('GrowUp AI will read replies aloud', style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12)),
                       secondary: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
@@ -359,15 +394,33 @@ class _AICoachScreenState extends State<AICoachScreen> {
 
   Future<void> _loadMessages() async {
     if (_currentSessionId != null) {
-      final raw = await LocalDbService().getChatMessages(_currentSessionId!);
+      final user = FirebaseAuth.instance.currentUser;
+      final userId = user?.uid ?? 'guest';
+      final raw = await FirestoreService().getChatMessages(userId, _currentSessionId!);
       if (raw.isNotEmpty) {
         setState(() {
-          _messages.addAll(raw.map((e) => ChatMessage(
-                id: e['id'] as String,
-                text: e['text'] as String,
-                isUser: (e['is_user'] as int) == 1,
-                timestamp: DateTime.parse(e['timestamp'] as String),
-              )));
+          _messages.addAll(raw.map((e) {
+            DateTime t;
+            if (e['timestamp'] is String) {
+              t = DateTime.parse(e['timestamp'] as String);
+            } else {
+              t = (e['timestamp'] as Timestamp).toDate();
+            }
+            
+            bool isU;
+            if (e['is_user'] is int) {
+              isU = (e['is_user'] as int) == 1;
+            } else {
+              isU = e['is_user'] as bool;
+            }
+
+            return ChatMessage(
+              id: e['id'] as String,
+              text: e['text'] as String,
+              isUser: isU,
+              timestamp: t,
+            );
+          }));
         });
         _scrollToBottom();
       }
@@ -376,9 +429,12 @@ class _AICoachScreenState extends State<AICoachScreen> {
 
   Future<void> _saveMessageLocal(ChatMessage m) async {
     if (_currentSessionId == null) return;
-    await LocalDbService().insertChatMessage(
-      id: m.id,
+    final user = FirebaseAuth.instance.currentUser;
+    final userId = user?.uid ?? 'guest';
+    await FirestoreService().saveChatMessage(
+      userId: userId,
       sessionId: _currentSessionId!,
+      messageId: m.id,
       text: m.text,
       isUser: m.isUser,
       timestamp: m.timestamp,
@@ -398,31 +454,27 @@ class _AICoachScreenState extends State<AICoachScreen> {
   }
 
   void _sendMessage() async {
-    if (_isTyping) return;
-
+    if (!mounted) return;
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
+    if (_isTyping) return;
+    
     // Check Token Limit before sending
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final dateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      final usedTokens = await FirestoreService().getDailyTokenUsage(userId: user.uid, dateKey: dateKey);
-      final limit = await FirestoreService().getDailyTokenLimit();
-      
-      if (usedTokens >= limit) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Daily AI limit reached! ($limit tokens). Please try again tomorrow.', style: GoogleFonts.outfit()),
-              backgroundColor: Colors.redAccent,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        }
-        return;
+    if (_tokenLimit > 0 && _usedTokens >= _tokenLimit) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Daily AI limit reached! ($_tokenLimit tokens). Please try again tomorrow.', style: GoogleFonts.outfit()),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
+      return;
     }
+    
+    final user = FirebaseAuth.instance.currentUser;
 
     _messageController.clear();
     
@@ -440,12 +492,14 @@ class _AICoachScreenState extends State<AICoachScreen> {
     _scrollToBottom();
 
     // If it's a new session, create it first
+    final userId = user?.uid ?? 'guest';
     if (_currentSessionId == null) {
       _currentSessionId = const Uuid().v4();
       final words = text.split(' ');
       final title = words.take(4).join(' ') + (words.length > 4 ? '...' : '');
-      await LocalDbService().createChatSession(
-        id: _currentSessionId!,
+      await FirestoreService().createChatSession(
+        userId: userId,
+        sessionId: _currentSessionId!,
         title: title,
         updatedAt: DateTime.now(),
       );
@@ -454,7 +508,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
         await _saveMessageLocal(_messages.first);
       }
     } else {
-      await LocalDbService().updateChatSessionDate(_currentSessionId!, DateTime.now());
+      await FirestoreService().updateChatSessionDate(userId, _currentSessionId!, DateTime.now());
     }
 
     await _saveMessageLocal(userMsg);
@@ -475,14 +529,8 @@ class _AICoachScreenState extends State<AICoachScreen> {
       );
       
       final responseText = result['text'] as String;
-      final tokensUsed = result['tokens'] as int;
 
-      // Track token usage in Firestore
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final dateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
-        FirestoreService().trackChatUsage(userId: user.uid, dateKey: dateKey, tokensUsed: tokensUsed);
-      }
+      // Track token usage is now automatically handled in GeminiService
 
       if (!mounted) return;
 
@@ -503,6 +551,13 @@ class _AICoachScreenState extends State<AICoachScreen> {
       // Auto-play TTS if enabled
       if (_autoVoiceOn) {
         await _speak(responseText);
+      }
+
+      // Update tokens after successful generation using the returned token count
+      if (mounted) {
+        setState(() {
+          _usedTokens += (result['tokens'] as num).toInt();
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -558,7 +613,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'AURA AI',
+                            'GrowUp AI',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.outfit(
@@ -611,6 +666,27 @@ class _AICoachScreenState extends State<AICoachScreen> {
               ),
               const Divider(color: Colors.white10, height: 1),
 
+              // Usage Limit Progress Bar
+              if (_usedTokens >= _tokenLimit && _tokenLimit > 0)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: UsageLimitProgressBar(
+                    title: 'Daily AI Tokens Reached',
+                    used: _usedTokens,
+                    limit: _tokenLimit,
+                    icon: Icons.warning_rounded,
+                  ),
+                )
+              else if (_tokenLimit > 0)
+                LinearProgressIndicator(
+                  value: (_usedTokens / _tokenLimit).clamp(0.0, 1.0),
+                  backgroundColor: Colors.transparent,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    (_usedTokens / _tokenLimit) > 0.8 ? Colors.orangeAccent : AppTheme.primary.withAlpha(100)
+                  ),
+                  minHeight: 2,
+                ),
+
               // Chat Messages list
               Expanded(
                 child: ListView.builder(
@@ -632,7 +708,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
                     children: [
                       const SizedBox(width: 8),
                       Text(
-                        'AURA AI is compiling reply...',
+                        'GrowUp AI is compiling reply...',
                         style: GoogleFonts.outfit(
                           fontSize: 11,
                           fontStyle: FontStyle.italic,
@@ -654,6 +730,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
                     Expanded(
                       child: TextField(
                         controller: _messageController,
+                        enabled: !_isTyping,
                         style: GoogleFonts.outfit(color: Colors.white),
                         decoration: InputDecoration(
                           hintText: 'Ask about Mewing, Acne, Sunscreens...',
@@ -671,32 +748,35 @@ class _AICoachScreenState extends State<AICoachScreen> {
                     ),
                     const SizedBox(width: 8),
                     GestureDetector(
-                      onTap: _listen,
+                      onTap: _isTyping ? null : _listen,
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: _isListening ? Colors.redAccent : Colors.white.withAlpha(20),
+                          color: _isTyping 
+                              ? Colors.white.withAlpha(10)
+                              : (_isListening ? Colors.redAccent : Colors.white.withAlpha(20)),
                         ),
                         child: Icon(
                           _isListening ? Icons.mic : Icons.mic_none,
-                          color: Colors.white,
+                          color: _isTyping ? Colors.white30 : Colors.white,
                           size: 20,
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     GestureDetector(
-                      onTap: _sendMessage,
+                      onTap: _isTyping ? null : _sendMessage,
                       child: Container(
                         padding: const EdgeInsets.all(12),
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: AppTheme.primaryGradient,
+                          gradient: _isTyping ? null : AppTheme.primaryGradient,
+                          color: _isTyping ? Colors.white.withAlpha(10) : null,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.send_rounded,
-                          color: Colors.white,
+                          color: _isTyping ? Colors.white30 : Colors.white,
                           size: 20,
                         ),
                       ),
@@ -743,7 +823,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'AURA AI Speaking...',
+                                'GrowUp AI Speaking...',
                                 style: GoogleFonts.outfit(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -923,7 +1003,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
                 s,
                 style: GoogleFonts.outfit(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
               ),
-              onPressed: () {
+              onPressed: _isTyping ? null : () {
                 _messageController.text = s.substring(0, s.length - 2).trim(); // Strip emoji
                 _sendMessage();
               },

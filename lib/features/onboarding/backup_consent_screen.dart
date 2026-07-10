@@ -4,7 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/backup_preference_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../core/services/local_db_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../core/services/firestore_service.dart';
+import '../../core/services/subscription_service.dart';
 
 /// Shown once after onboarding (goal selection) before the first camera scan.
 /// Lets the user explicitly choose whether to enable cloud backup.
@@ -51,11 +53,28 @@ class _BackupConsentScreenState extends State<BackupConsentScreen>
     if (mounted) {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final localScans = await LocalDbService().getAllScans(user.uid);
+        final localScans = await FirestoreService().getUserScans(user.uid);
         if (localScans.isNotEmpty) {
-          final lastScanDate = DateTime.parse(localScans.first['date'] as String);
+          final scanDateData = localScans.first['scan_date'];
+          DateTime lastScanDate;
+          if (scanDateData is Timestamp) {
+            lastScanDate = scanDateData.toDate();
+          } else {
+            lastScanDate = DateTime.parse(scanDateData.toString());
+          }
           if (DateTime.now().difference(lastScanDate).inDays < 7) {
-            if (mounted) Navigator.of(context).pushReplacementNamed('/dashboard');
+            bool isPro = false;
+            try {
+              isPro = await SubscriptionService().isProEntitled();
+            } catch (_) {}
+
+            if (!mounted) return;
+
+            if (isPro) {
+              Navigator.of(context).pushReplacementNamed('/dashboard');
+            } else {
+              Navigator.of(context).pushReplacementNamed('/locked-report');
+            }
             return;
           }
         }

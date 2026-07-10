@@ -419,7 +419,7 @@ class _CameraScanScreenState extends State<CameraScanScreen>
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'TAP TO SCAN CURRENT AURA',
+                        'TAP TO SCAN CURRENT GrowUp AI',
                         style: GoogleFonts.outfit(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,

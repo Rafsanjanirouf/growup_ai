@@ -8,18 +8,20 @@ import '../../core/providers/user_provider.dart';
 import '../../core/providers/habit_provider.dart';
 import '../../core/providers/daily_progress_provider.dart';
 import '../../core/providers/scan_history_provider.dart';
-import '../../core/services/sync_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/services/firestore_service.dart';
 
 // Import sibling features to host them inside the persistent tabs
 import '../analytics/analytics_screen.dart';
 import '../profile/profile_screen.dart';
 import '../coach/coach_screen.dart';
-import '../share/glow_up_share_screen.dart';
+
 import '../scan/scan_history_screen.dart';
 import 'task_history_screen.dart';
 import 'task_management_screen.dart';
 import '../ai_recommendations/ai_outfit_screen.dart';
 import '../ai_recommendations/ai_hair_style_screen.dart';
+
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -30,7 +32,7 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   int _navIndex = 0; // 0=Today, 1=History, 2=Coach, 3=Analytics, 4=Profile
-  String _activeTab = 'morning'; // 'morning' | 'afternoon' | 'night' inside Today's checklist
+  bool _isGenerateDialogShowing = false;
 
   @override
   void initState() {
@@ -42,7 +44,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _syncDailyProgress() async {
-    final rawData = await SyncService().fetchRemoteDailyProgress();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final rawData = await FirestoreService().getUserDailyProgress(user.uid);
     if (rawData.isNotEmpty) {
       final parsed = rawData.map((d) {
         final dt = DateTime.tryParse(d['date_key'] ?? '') ?? DateTime.now();
@@ -59,6 +63,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(userStateProvider);
+
+    // Security check: if user somehow reaches dashboard without pro subscription
+    final authUser = FirebaseAuth.instance.currentUser;
+    if (authUser != null && !user.isPro) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/locked-report');
+        }
+      });
+      return const Scaffold(
+        backgroundColor: AppTheme.bg,
+        body: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
+      );
+    }
     ref.listen<UserState>(userStateProvider, (previous, next) {
       if (next.hasLostStreak && (previous == null || !previous.hasLostStreak)) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -68,50 +87,47 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     });
 
     return Scaffold(
-      body: IndexedStack(
-        index: _navIndex,
-        children: [
-          // Tab 0: Daily habits Checklist
-          _buildTodayHabitsView(),
-          
-          // Tab 1: Scan History (Persistent state)
-          const ScanHistoryScreen(isTab: true),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppTheme.backgroundGradient,
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              if (_buildDynamicHeader(context) != null)
+                _buildDynamicHeader(context)!,
+              Expanded(
+                child: IndexedStack(
+                  index: _navIndex,
+                  children: [
+                    // Tab 0: Daily habits Checklist
+                    _buildTodayHabitsView(),
+                    
+                    // Tab 1: Scan History (Persistent state)
+                    const ScanHistoryScreen(isTab: true),
 
-          // Tab 2: AI Lookmaxxing Coach Console (Persistent state)
-          const AICoachScreen(isTab: true),
-          
-          // Tab 3: AI Analytics View (Persistent state)
-          const AnalyticsScreen(isTab: true),
-          
-          // Tab 4: Profile View (Persistent state)
-          const ProfileScreen(isTab: true),
-        ],
+                    // Tab 2: AI Lookmaxxing Coach Console (Persistent state)
+                    const AICoachScreen(isTab: true),
+                    
+                    // Tab 3: AI Analytics View (Persistent state)
+                    const AnalyticsScreen(isTab: true),
+                    
+                    // Tab 4: Profile View (Persistent state)
+                    const ProfileScreen(isTab: true),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      floatingActionButton: _navIndex == 0 ? Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: AppTheme.primaryGradient,
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.primary.withAlpha(80),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            )
-          ],
-        ),
-        child: FloatingActionButton(
-          onPressed: () => _showAddTaskDialog(context),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          highlightElevation: 0,
-          child: const Icon(Icons.add, color: Colors.white),
-        ),
-      ) : null,
       bottomNavigationBar: _buildBottomNavbar(),
     );
   }
 
   // 1. Today Habits Tab View
+  // ignore: unused_element
   Widget _buildTodayHabitsView() {
     final user = ref.watch(userStateProvider);
     final habits = ref.watch(habitStateProvider);
@@ -120,13 +136,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // Check for missing tasks
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // If no tasks exist for today, prompt generation
-      if (habits.isEmpty) {
-        _showGenerateTasksDialog(context, ref);
+      if (habits.isEmpty && !_isGenerateDialogShowing) {
+        _isGenerateDialogShowing = true;
+        await _showGenerateTasksDialog(context, ref);
+        if (mounted) {
+          _isGenerateDialogShowing = false;
+        }
       }
     });
 
-    // Filter habits by current tab
-    final activeHabits = habits.where((h) => h.timeOfDay == _activeTab).toList();
+    // Show all habits sorted by time of day
+    final timeOrder = {'morning': 0, 'noon': 1, 'evening': 2, 'night': 3};
+    final activeHabits = List<Habit>.from(habits)
+      ..sort((a, b) => (timeOrder[a.timeOfDay] ?? 99).compareTo(timeOrder[b.timeOfDay] ?? 99));
 
     // Calculate overall completion percentage
     final totalHabits = habits.length;
@@ -139,139 +161,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final double rawAura = latestScan != null ? latestScan.auraScore : user.auraScore;
     final displayAura = rawAura > 10.0 ? rawAura / 10.0 : rawAura;
 
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: AppTheme.backgroundGradient,
-      ),
-      child: SafeArea(
-        child: Column(
-          children: [
-            // Dynamic HUD Top Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: GlassContainer(
+              glowColor: AppTheme.primary,
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'GrowUp AI',
-                          style: GoogleFonts.cinzel(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 3.0,
-                            color: Colors.white,
-                            shadows: [
-                              Shadow(
-                                color: Colors.white.withValues(alpha: 0.4),
-                                blurRadius: 8,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Text(
-                              'Hey, ',
-                              style: GoogleFonts.outfit(
-                                fontSize: 20,
-                                fontWeight: FontWeight.normal,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                user.name.isEmpty
-                                    ? 'Champ'
-                                    : user.name.trim().split(' ').first,
-                                style: GoogleFonts.outfit(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppTheme.secondary,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Streak Flame + Share button row
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withAlpha(20),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.orange.withAlpha(100)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('🔥', style: TextStyle(fontSize: 18)),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${user.streak} STREAK',
-                              style: GoogleFonts.outfit(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.orange,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Quick Share Button
-                      GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const GlowUpShareScreen(),
-                          ),
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppTheme.primary, AppTheme.secondary],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.secondary.withAlpha(80),
-                                blurRadius: 8,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.ios_share_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Glowing Score Ring & Overall Progress
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: GlassContainer(
-                glowColor: AppTheme.primary,
-                child: Row(
-                  children: [
                     // Circular progress bar dynamically updates when checking tasks!
                     SizedBox(
                       width: 105,
@@ -302,7 +201,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 ),
                               ),
                               Text(
-                                'AURA',
+                                'GrowUp AI',
                                 style: GoogleFonts.outfit(
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,
@@ -378,14 +277,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+          ),
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-            // AI Recommendations Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                children: [
-                  Expanded(
+        // AI Recommendations Section
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              children: [
+                Expanded(
                     child: _buildAiRecommendationCard(
                       title: 'AI Outfits',
                       subtitle: 'Find your style',
@@ -417,39 +318,41 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+          ),
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-            // Segmented Tab Selector (Morning, Noon, Evening, Night)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: Colors.black45,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white10),
-                ),
-                child: Row(
-                  children: [
-                    _buildTabButton('morning', '☀️ Morn'),
-                    _buildTabButton('afternoon', '⚡ Noon'),
-                    _buildTabButton('evening', '🌆 Eve'),
-                    _buildTabButton('night', '🌙 Night'),
-                  ],
-                ),
+        // Today Tasks Header
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              children: [
+                  Text(
+                    'Today Tasks',
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${activeHabits.where((h) => h.isCompleted).length}/${activeHabits.length}',
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 10),
+          ),
+        const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
-            // Checklist Habit Items + Mini Chart in scrollable list
-            Expanded(
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  // Habit checklist
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                    sliver: activeHabits.isEmpty
+        // Habit checklist
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+          sliver: activeHabits.isEmpty
                         ? SliverToBoxAdapter(
                             child: Padding(
                               padding: const EdgeInsets.symmetric(vertical: 40),
@@ -573,19 +476,63 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                                                       Colors.white38,
                                                                 ),
                                                               ),
-                                                              if (h.description.isNotEmpty) ...
-                                                                [
-                                                                  const SizedBox(height: 2),
-                                                                  Text(
-                                                                    h.description,
-                                                                    style: GoogleFonts.outfit(
-                                                                      fontSize: 11,
-                                                                      color: AppTheme.textSecondary,
-                                                                    ),
-                                                                    maxLines: 1,
-                                                                    overflow: TextOverflow.ellipsis,
+                                                              const SizedBox(height: 6),
+                                                              Row(
+                                                                children: [
+                                                                  // Time of day Tag
+                                                                  Builder(
+                                                                    builder: (context) {
+                                                                      final t = h.timeOfDay;
+                                                                      final c = t == 'morning' ? Colors.orange :
+                                                                                t == 'noon' ? Colors.amber :
+                                                                                t == 'evening' ? Colors.purpleAccent :
+                                                                                t == 'night' ? Colors.indigoAccent : Colors.grey;
+                                                                      final icon = t == 'morning' ? '☀️' :
+                                                                                   t == 'noon' ? '⚡' :
+                                                                                   t == 'evening' ? '🌆' :
+                                                                                   t == 'night' ? '🌙' : '📌';
+                                                                      return Container(
+                                                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                                        decoration: BoxDecoration(
+                                                                          color: c.withAlpha(20),
+                                                                          borderRadius: BorderRadius.circular(6),
+                                                                          border: Border.all(color: c.withAlpha(80)),
+                                                                        ),
+                                                                        child: Row(
+                                                                          mainAxisSize: MainAxisSize.min,
+                                                                          children: [
+                                                                            Text(icon, style: const TextStyle(fontSize: 8)),
+                                                                            const SizedBox(width: 4),
+                                                                            Text(
+                                                                              t.toUpperCase(),
+                                                                              style: GoogleFonts.outfit(
+                                                                                fontSize: 8,
+                                                                                fontWeight: FontWeight.bold,
+                                                                                color: c,
+                                                                                letterSpacing: 0.5,
+                                                                              ),
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      );
+                                                                    }
                                                                   ),
+                                                                  if (h.description.isNotEmpty) ...[
+                                                                    const SizedBox(width: 8),
+                                                                    Expanded(
+                                                                      child: Text(
+                                                                        h.description,
+                                                                        style: GoogleFonts.outfit(
+                                                                          fontSize: 11,
+                                                                          color: AppTheme.textSecondary,
+                                                                        ),
+                                                                        maxLines: 1,
+                                                                        overflow: TextOverflow.ellipsis,
+                                                                      ),
+                                                                    ),
+                                                                  ],
                                                                 ],
+                                                              ),
                                                             ],
                                                           ),
                                                         ),
@@ -623,42 +570,105 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   SliverToBoxAdapter(
                     child: _buildWeeklyMiniChart(context, last7),
                   ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      ],
     );
   }
 
-  void _showGenerateTasksDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
+  Future<void> _showGenerateTasksDialog(BuildContext context, WidgetRef ref) async {
+    bool isGenerating = false;
+    await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E24),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Daily Routine Required',
-          style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          'Your AI Coach has analyzed your data. Generate today\'s personalized Lookmaxxing routine now.',
-          style: GoogleFonts.outfit(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final scans = ref.read(scanHistoryProvider);
-              final latest = scans.isNotEmpty ? scans.first : null;
-              final fullData = latest?.fullData;
-              await ref.read(habitStateProvider.notifier).generateTasksFromScan(fullData);
-            },
-            child: Text('Generate Routine', style: GoogleFonts.outfit(color: AppTheme.secondary, fontWeight: FontWeight.bold)),
-          ),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) {
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: AppTheme.primary.withAlpha(50), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primary.withAlpha(30),
+                    blurRadius: 40,
+                    spreadRadius: -10,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // GrowUp AI Icon/Avatar
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: AppTheme.primaryGradient,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primary.withAlpha(80),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        )
+                      ],
+                    ),
+                    child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 30),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Daily Routine Ready',
+                    style: GoogleFonts.outfit(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (isGenerating) ...[
+                    const SizedBox(height: 16),
+                    const CircularProgressIndicator(color: AppTheme.primary),
+                    const SizedBox(height: 20),
+                    Text(
+                      'GrowUp AI is analyzing your profile\nand generating tasks...',
+                      style: GoogleFonts.outfit(fontSize: 14, color: Colors.white70, height: 1.4),
+                      textAlign: TextAlign.center,
+                    ),
+                  ] else ...[
+                    Text(
+                      'Your personal Lookmaxxing coach is ready to generate today\'s 8-10 customized tasks based on your goals and profile.',
+                      style: GoogleFonts.outfit(fontSize: 14, color: Colors.white70, height: 1.4),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          setState(() { isGenerating = true; });
+                          final user = ref.read(userStateProvider);
+                          await ref.read(habitStateProvider.notifier).generateAITasks(user);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: AppTheme.primary,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 8,
+                          shadowColor: AppTheme.primary.withAlpha(100),
+                        ),
+                        child: Text('Generate Routine', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black, letterSpacing: 1.0)),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }
       ),
     );
   }
@@ -696,8 +706,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
+  // ignore: unused_element
   void _showAddTaskDialog(BuildContext context) {
-    String timeOfDay = _activeTab;
+    String timeOfDay = 'Morning';
     String frequency = 'daily';
     final titleCtrl = TextEditingController();
 
@@ -765,7 +776,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
-                  children: ['morning', 'afternoon', 'evening', 'night'].map((t) {
+                  children: ['morning', 'noon', 'evening', 'night'].map((t) {
                     final isSelected = timeOfDay == t;
                     return ChoiceChip(
                       label: Text(t.toUpperCase(), style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: isSelected ? Colors.black : Colors.white70)),
@@ -976,63 +987,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Colors.white24;
   }
 
-  Widget _buildTabButton(String tabKey, String label) {
-    final isSelected = _activeTab == tabKey;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _activeTab = tabKey),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 9),
-          decoration: BoxDecoration(
-            gradient: isSelected
-                ? const LinearGradient(
-                    colors: [AppTheme.primary, AppTheme.secondary],
-                  )
-                : null,
-            borderRadius: BorderRadius.circular(11),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: AppTheme.primary.withAlpha(60),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : [],
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: GoogleFonts.outfit(
-                fontWeight: FontWeight.bold,
-                fontSize: 11,
-                color: isSelected ? Colors.white : AppTheme.textSecondary,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   // 2. Custom Persistent Bottom Navigation Bar
   Widget _buildBottomNavbar() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-      decoration: const BoxDecoration(
-        color: AppTheme.surface,
-        border: Border(top: BorderSide(color: Colors.white10)),
+      decoration: BoxDecoration(
+        color: AppTheme.bgSecondary,
+        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.05))),
       ),
       child: SafeArea(
         top: false,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _buildNavbarItem(0, Icons.today_rounded, 'Today'),
-            _buildNavbarItem(1, Icons.history_rounded, 'History'),
-            _buildNavbarItem(2, Icons.smart_toy_rounded, 'Coach'),
-            _buildNavbarItem(3, Icons.analytics_outlined, 'Analytics'),
+            _buildNavbarItem(0, Icons.home_rounded, 'Home'),
+            _buildNavbarItem(1, Icons.flag_rounded, 'Journey'),
+            _buildNavbarItem(2, Icons.auto_awesome_rounded, 'AI Coach'),
+            _buildNavbarItem(3, Icons.explore_rounded, 'Discover'),
             _buildNavbarItem(4, Icons.person_outline_rounded, 'Profile'),
           ],
         ),
@@ -1042,29 +1014,45 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Widget _buildNavbarItem(int index, IconData icon, String label) {
     final isSelected = _navIndex == index;
+    final color = isSelected ? AppTheme.primary : Colors.white54; // Theme primary color
     return GestureDetector(
       onTap: () {
         setState(() {
           _navIndex = index;
         });
       },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: isSelected ? AppTheme.secondary : AppTheme.textSecondary,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.outfit(
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? AppTheme.secondary : AppTheme.textSecondary,
+      child: Container(
+        color: Colors.transparent, // expand hit area
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: color,
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            // Neon underline indicator
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              height: 3,
+              width: isSelected ? 20 : 0,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(2),
+                boxShadow: isSelected ? [BoxShadow(color: color.withValues(alpha: 0.6), blurRadius: 4)] : [],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1525,6 +1513,114 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         );
       },
+    );
+  }
+  Widget? _buildDynamicHeader(BuildContext context) {
+    if (_navIndex == 2 || _navIndex == 4) return null;
+
+    final user = ref.watch(userStateProvider);
+    final scans = ref.watch(scanHistoryProvider);
+    final streak = user.streak;
+
+    String topText = '';
+    String bottomText = '';
+
+    if (_navIndex == 0) {
+      topText = 'Good Morning,';
+      final firstName = user.name.isEmpty ? 'Champ' : user.name.trim().split(' ').first;
+      bottomText = '$firstName 👋';
+    } else if (_navIndex == 1) {
+      topText = 'JOURNEY';
+      bottomText = '${scans.length} Total Scans';
+    } else if (_navIndex == 3) {
+      topText = 'DISCOVER';
+      bottomText = 'AI Analytics';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
+      child: Row(
+        children: [
+          // Profile Avatar
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white24, width: 1),
+              image: const DecorationImage(
+                image: AssetImage('assets/image/avater_image.png'), // Placeholder
+                fit: BoxFit.cover,
+              ),
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  bottom: -2,
+                  right: -2,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1E1E24),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.workspace_premium, color: Colors.orange, size: 14),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  topText,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white60,
+                    fontSize: 13,
+                    letterSpacing: _navIndex == 0 ? 0 : 1.5,
+                    fontWeight: _navIndex == 0 ? FontWeight.normal : FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  bottomText,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Streak Flame
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('🔥', style: TextStyle(fontSize: 16)),
+                const SizedBox(width: 4),
+                Text(
+                  '$streak',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

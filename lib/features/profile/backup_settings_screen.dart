@@ -363,7 +363,7 @@ class _BackupSettingsScreenState extends State<BackupSettingsScreen>
   Widget _buildDataBreakdown() {
     final items = [
       ('📸', 'Face Scan Image', 'Before/after photos'),
-      ('🧠', 'AI Scan Results', 'Aura scores, symmetry, ratings'),
+      ('🧠', 'AI Scan Results', 'GrowUp AI scores, symmetry, ratings'),
       ('📋', 'Daily Habits & Tasks', 'Routine logs & streaks'),
       ('📊', 'Scan History', 'Progress timeline'),
     ];

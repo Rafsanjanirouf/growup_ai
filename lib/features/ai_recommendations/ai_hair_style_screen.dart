@@ -8,14 +8,15 @@ import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/services/gemini_service.dart';
-import '../../core/services/local_db_service.dart';
+
 import '../../core/providers/user_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../core/widgets/language_picker_sheet.dart';
+import '../../core/widgets/usage_limit_progress_bar.dart';
 import 'hair_style_history_screen.dart';
 import 'hair_style_image_fullscreen.dart';
-import '../../core/services/sync_service.dart';
+
 import '../../core/services/firestore_service.dart';
 import 'package:intl/intl.dart';
 
@@ -36,7 +37,41 @@ class _AiHairStyleScreenState extends ConsumerState<AiHairStyleScreen> {
   String? _generatedImageResult;
   String? _errorMessage;
 
+  int _usedTextLimit = 0;
+  int _textLimit = 0;
+  int _usedImageLimit = 0;
+  int _imageLimit = 0;
+
   final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLimits();
+  }
+
+  Future<void> _fetchLimits() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final dateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final monthKey = DateFormat('yyyy-MM').format(DateTime.now());
+      
+      final usedText = await FirestoreService().getDailyImageToTextUsage(userId: user.uid, dateKey: dateKey);
+      final textLim = await FirestoreService().getDailyImageToTextLimit();
+      
+      final usedImage = await FirestoreService().getMonthlyImageGenerationUsage(userId: user.uid, monthKey: monthKey);
+      final imageLim = await FirestoreService().getMonthlyImageGenerationLimit();
+      
+      if (mounted) {
+        setState(() {
+          _usedTextLimit = usedText;
+          _textLimit = textLim;
+          _usedImageLimit = usedImage;
+          _imageLimit = imageLim;
+        });
+      }
+    }
+  }
 
   Future<void> _pickImage(ImageSource source) async {
     try {
@@ -174,6 +209,12 @@ class _AiHairStyleScreenState extends ConsumerState<AiHairStyleScreen> {
         if (user != null) {
           final dateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
           FirestoreService().trackImageToTextUsage(userId: user.uid, dateKey: dateKey);
+          final updatedUsed = await FirestoreService().getDailyImageToTextUsage(userId: user.uid, dateKey: dateKey);
+          if (mounted) {
+            setState(() {
+              _usedTextLimit = updatedUsed;
+            });
+          }
         }
 
         setState(() {
@@ -260,6 +301,12 @@ Output must look like a professional report from a luxury AI glow-up and hairsty
         if (user != null) {
           final monthKey = DateFormat('yyyy-MM').format(DateTime.now());
           FirestoreService().trackImageGenerationUsage(userId: user.uid, monthKey: monthKey);
+          final updatedUsed = await FirestoreService().getMonthlyImageGenerationUsage(userId: user.uid, monthKey: monthKey);
+          if (mounted) {
+            setState(() {
+              _usedImageLimit = updatedUsed;
+            });
+          }
         }
 
         setState(() {
@@ -280,16 +327,42 @@ Output must look like a professional report from a luxury AI glow-up and hairsty
     final userId = user?.uid ?? 'guest';
     final scanId = const Uuid().v4();
 
-    await LocalDbService().insertHairStyleScan(
-      id: scanId,
-      userId: userId,
-      date: DateTime.now(),
-      imagePath: _selectedImage!.path,
-      fullData: fullData,
-    );
+    String? imageUrl;
+    if (_selectedImage != null) {
+      imageUrl = await FirestoreService().uploadImage(
+        _selectedImage!.path,
+        userId,
+        scanId,
+        folder: 'hairstyle_images',
+      );
+    }
 
-    // Trigger background sync to upload to Firestore
-    SyncService().syncPendingScans();
+    String? generatedImageUrl;
+    if (fullData['mode'] == 'image' && fullData['image_result'] != null) {
+      final imageResult = fullData['image_result'] as String;
+      if (!imageResult.startsWith('http://') && !imageResult.startsWith('https://')) {
+        generatedImageUrl = await FirestoreService().uploadBase64Image(
+          imageResult, 
+          userId, 
+          scanId, 
+          'hairstyle_images'
+        );
+        if (generatedImageUrl != null) {
+          fullData['image_result'] = generatedImageUrl;
+        }
+      } else {
+        generatedImageUrl = imageResult;
+      }
+    }
+
+    await FirestoreService().saveHairStyleRecord(
+      userId: userId,
+      id: scanId,
+      date: DateTime.now(),
+      imageUrl: imageUrl,
+      fullData: fullData,
+      generatedImageUrl: generatedImageUrl,
+    );
   }
 
   @override
@@ -393,6 +466,20 @@ Output must look like a professional report from a luxury AI glow-up and hairsty
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (_selectedMode == 0)
+                  UsageLimitProgressBar(
+                    title: 'Daily AI Report',
+                    used: _usedTextLimit,
+                    limit: _textLimit,
+                    icon: Icons.text_snippet_rounded,
+                  )
+                else
+                  UsageLimitProgressBar(
+                    title: 'Monthly Premium Image',
+                    used: _usedImageLimit,
+                    limit: _imageLimit,
+                    icon: Icons.image_rounded,
+                  ),
                 _buildModeSelector(),
                 const SizedBox(height: 24),
                 _buildUploadSection(),

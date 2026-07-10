@@ -1,7 +1,8 @@
-import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/local_db_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/firestore_service.dart';
 
 class OutfitRecord {
   final String id;
@@ -18,13 +19,20 @@ class OutfitRecord {
     required this.fullData,
   });
 
-  factory OutfitRecord.fromSqlite(Map<String, dynamic> row) {
+  factory OutfitRecord.fromFirestore(Map<String, dynamic> data) {
+    DateTime d;
+    if (data['date'] is Timestamp) {
+      d = (data['date'] as Timestamp).toDate();
+    } else {
+      d = DateTime.parse(data['date'].toString());
+    }
+
     return OutfitRecord(
-      id: row['id'] as String,
-      userId: row['user_id'] as String,
-      date: DateTime.parse(row['date'] as String),
-      imagePath: row['image_path'] as String?,
-      fullData: jsonDecode(row['full_data'] as String) as Map<String, dynamic>,
+      id: data['id'] as String,
+      userId: data['user_id'] as String,
+      date: d,
+      imagePath: data['image_url'] as String?,
+      fullData: data['full_data'] as Map<String, dynamic>? ?? {},
     );
   }
 }
@@ -34,31 +42,35 @@ class OutfitHistoryNotifier extends StateNotifier<List<OutfitRecord>> {
     loadHistory();
   }
 
-  final LocalDbService _localDb = LocalDbService();
+  final FirestoreService _firestore = FirestoreService();
 
   Future<void> loadHistory() async {
     try {
-      final userId = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
-      final rows = await _localDb.getAllOutfitScans(userId);
-      state = rows.map(OutfitRecord.fromSqlite).toList();
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
+      final docs = await _firestore.getOutfitScans(userId);
+      state = docs.map(OutfitRecord.fromFirestore).toList();
     } catch (e) {
       state = [];
     }
   }
 
   Future<void> addOutfitScan(OutfitRecord record) async {
-    await _localDb.insertOutfitScan(
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    await _firestore.saveOutfitRecord(
       id: record.id,
-      userId: record.userId,
+      userId: userId,
       date: record.date,
-      imagePath: record.imagePath,
+      imageUrl: record.imagePath,
       fullData: record.fullData,
     );
     state = [record, ...state];
   }
 
   Future<void> deleteOutfitScan(String id) async {
-    await _localDb.deleteOutfitScan(id);
+    await _firestore.deleteOutfitRecord(id);
     state = state.where((record) => record.id != id).toList();
   }
 }
