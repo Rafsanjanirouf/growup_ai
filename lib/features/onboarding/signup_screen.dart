@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../core/services/auth_service.dart';
@@ -80,33 +81,6 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  void _showLegalDocument(String title, String content) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: Text(
-          title,
-          style: GoogleFonts.outfit(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: SingleChildScrollView(
-          child: Text(
-            content,
-            style: GoogleFonts.outfit(color: Colors.white70, fontSize: 14),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Close', style: GoogleFonts.outfit(color: AppTheme.primary)),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   void dispose() {
@@ -230,6 +204,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
                         // Terms and Conditions Checkbox
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             SizedBox(
                               width: 24,
@@ -247,25 +222,56 @@ class _SignupScreenState extends State<SignupScreen> {
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  _showLegalDocument(
-                                    'Terms of Service',
-                                    'Welcome to GrowUp AI Lookmaxxing Coach!\n\n'
-                                    'By registering, you agree to: \n\n'
-                                    '1. Educational Guidance: Lookmaxxing, Mewing, and jaw fitness routines are for self-improvement educational purposes only. They do not constitute professional clinical medical advice.\n\n'
-                                    '2. Data Privacy: Your facial photos remain locally processed or safely anonymized for AI analysis.\n\n'
-                                    '3. Subscription Rules: Subscription billing is managed securely. You can cancel active auto-renewing subscriptions anytime.',
-                                  );
-                                },
-                                child: Text(
-                                  'I agree to the Terms & Conditions and Privacy Policy.',
-                                  style: GoogleFonts.outfit(
-                                    color: AppTheme.primary,
-                                    fontSize: 12,
-                                    decoration: TextDecoration.underline,
+                              child: Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Text(
+                                    'I agree to the ',
+                                    style: GoogleFonts.outfit(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                    ),
                                   ),
-                                ),
+                                  GestureDetector(
+                                    onTap: () => launchUrl(
+                                      Uri.parse('https://growup099.blogspot.com/p/privacy-policy.html'),
+                                      mode: LaunchMode.externalApplication,
+                                    ),
+                                    child: Text(
+                                      'Privacy Policy',
+                                      style: GoogleFonts.outfit(
+                                        color: AppTheme.primary,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        decoration: TextDecoration.underline,
+                                        decorationColor: AppTheme.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    ' & ',
+                                    style: GoogleFonts.outfit(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () => launchUrl(
+                                      Uri.parse('https://growup099.blogspot.com/p/terms-conditions.html'),
+                                      mode: LaunchMode.externalApplication,
+                                    ),
+                                    child: Text(
+                                      'Terms & Conditions',
+                                      style: GoogleFonts.outfit(
+                                        color: AppTheme.primary,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        decoration: TextDecoration.underline,
+                                        decorationColor: AppTheme.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],

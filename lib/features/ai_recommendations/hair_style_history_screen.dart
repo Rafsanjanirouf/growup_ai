@@ -39,7 +39,9 @@ class _HairStyleHistoryScreenState extends State<HairStyleHistoryScreen> {
   }
 
   Future<void> _deleteRecord(String id) async {
-    await _dbService.deleteHairStyleRecord(id);
+    final user = FirebaseAuth.instance.currentUser;
+    final userId = user?.uid ?? 'guest';
+    await _dbService.deleteHairStyleRecord(userId, id);
     _loadHistory();
   }
 
@@ -202,8 +204,18 @@ class _HairStyleHistoryScreenState extends State<HairStyleHistoryScreen> {
           onTap: () {
             if (isImageMode) {
               final imageResult = data['image_result'] as String?;
-              if (imageResult != null && !imageResult.startsWith('http')) {
-                // Determine if valid base64
+              if (imageResult != null && imageResult.isNotEmpty) {
+                // HTTP URL (uploaded to Firebase Storage) → open fullscreen with URL
+                if (imageResult.startsWith('http')) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => HairStyleImageFullscreen(imageUrl: imageResult),
+                    ),
+                  );
+                  return;
+                }
+                // Base64 → try to decode and open fullscreen
                 try {
                   base64Decode(imageResult);
                   Navigator.push(
@@ -215,7 +227,7 @@ class _HairStyleHistoryScreenState extends State<HairStyleHistoryScreen> {
                   return;
                 } catch (_) {}
               }
-              // Show text fallback if not base64 or if it failed
+              // Fallback
               _showTextFallbackSheet(imageResult ?? 'No result found');
             } else {
               _showDetailsSheet(data, imagePath);

@@ -70,7 +70,9 @@ class OutfitHistoryNotifier extends StateNotifier<List<OutfitRecord>> {
   }
 
   Future<void> deleteOutfitScan(String id) async {
-    await _firestore.deleteOutfitRecord(id);
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+    await _firestore.deleteOutfitRecord(userId, id);
     state = state.where((record) => record.id != id).toList();
   }
 }

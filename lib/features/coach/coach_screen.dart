@@ -87,7 +87,12 @@ class _AICoachScreenState extends State<AICoachScreen> {
 
     if (user != null) {
       final dateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      final used = await FirestoreService().getDailyTokenUsage(userId: user.uid, dateKey: dateKey);
+      // Only count 'coach' category tokens for chat limit — not outfit/hairstyle tokens
+      final used = await FirestoreService().getDailyTokenUsage(
+        userId: user.uid,
+        dateKey: dateKey,
+        category: 'coach',
+      );
       final limit = await FirestoreService().getDailyTokenLimit();
       if (mounted) {
         setState(() {

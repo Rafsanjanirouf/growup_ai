@@ -1068,14 +1068,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: AppTheme.surface,
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF1E1E2E),
+                  const Color(0xFF16213E),
+                  const Color(0xFF0F3460),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: Colors.white10),
+              border: Border.all(color: AppTheme.primary.withAlpha(80), width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.primary.withAlpha(30),
+                  color: AppTheme.primary.withAlpha(60),
                   blurRadius: 40,
-                  spreadRadius: -10,
+                  spreadRadius: -5,
                 ),
               ],
             ),
@@ -1197,30 +1205,72 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // Toggle task
-                          _handleToggleHabit(habit);
-                          Navigator.pop(ctx);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: habit.isCompleted ? Colors.white10 : AppTheme.primary,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: Text(
-                          habit.isCompleted ? 'UNDO' : 'DONE',
-                          style: GoogleFonts.outfit(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: habit.isCompleted ? Colors.white : Colors.black,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                      ),
+                      child: habit.isCompleted
+                          ? ElevatedButton(
+                              onPressed: () {
+                                _handleToggleHabit(habit);
+                                Navigator.pop(ctx);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                backgroundColor: Colors.white12,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  side: const BorderSide(color: Colors.white24),
+                                ),
+                              ),
+                              child: Text(
+                                'UNDO',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                            )
+                          : Container(
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF7C3AED), Color(0xFF2575FC)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.primary.withAlpha(100),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  _handleToggleHabit(habit);
+                                  Navigator.pop(ctx);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: Text(
+                                  'DONE',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -1365,21 +1415,38 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: AppTheme.surface,
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF2D0A0A),
+                  const Color(0xFF1E0A1A),
+                  const Color(0xFF0D0D1E),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppTheme.danger.withAlpha(100), width: 2),
+              border: Border.all(color: AppTheme.danger.withAlpha(150), width: 2),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.danger.withAlpha(40),
-                  blurRadius: 40,
-                  spreadRadius: -10,
+                  color: AppTheme.danger.withAlpha(60),
+                  blurRadius: 50,
+                  spreadRadius: -5,
                 ),
               ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.sentiment_dissatisfied_rounded, color: AppTheme.danger, size: 60),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [AppTheme.danger.withAlpha(60), AppTheme.danger.withAlpha(10)],
+                    ),
+                  ),
+                  child: Icon(Icons.sentiment_dissatisfied_rounded, color: AppTheme.danger, size: 60),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   'Streak Lost!',
@@ -1402,25 +1469,44 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      ref.read(userStateProvider.notifier).acknowledgeLostStreak();
-                      Navigator.pop(ctx);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: AppTheme.danger,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [AppTheme.danger, const Color(0xFFFF6B6B)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.danger.withAlpha(100),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: Text(
-                      'START FROM 0',
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 1.0,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        ref.read(userStateProvider.notifier).acknowledgeLostStreak();
+                        Navigator.pop(ctx);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Text(
+                        'START FROM 0',
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1.0,
+                        ),
                       ),
                     ),
                   ),
@@ -1444,14 +1530,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: AppTheme.surface,
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF0A2D1A),
+                  const Color(0xFF0A1E2D),
+                  const Color(0xFF0D0D1E),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppTheme.success.withAlpha(100), width: 2),
+              border: Border.all(color: AppTheme.success.withAlpha(150), width: 2),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.success.withAlpha(60),
+                  color: AppTheme.success.withAlpha(80),
                   blurRadius: 60,
-                  spreadRadius: -10,
+                  spreadRadius: -5,
                 ),
               ],
             ),
@@ -1462,7 +1556,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppTheme.success.withAlpha(20),
+                    gradient: RadialGradient(
+                      colors: [AppTheme.success.withAlpha(70), AppTheme.success.withAlpha(10)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.success.withAlpha(80),
+                        blurRadius: 20,
+                        spreadRadius: 2,
+                      ),
+                    ],
                   ),
                   child: Icon(Icons.local_fire_department_rounded, color: AppTheme.success, size: 60),
                 ),
@@ -1488,22 +1591,41 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: AppTheme.success,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [AppTheme.success, const Color(0xFF00C9A7)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.success.withAlpha(120),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: Text(
-                      'AWESOME',
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 1.0,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Text(
+                        'AWESOME',
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1.0,
+                        ),
                       ),
                     ),
                   ),

@@ -22,9 +22,16 @@ class FirestoreService {
   CollectionReference get _scanHistory => _db.collection('scan_history');
   CollectionReference get _habits => _db.collection('habits');
   CollectionReference get _dailyProg => _db.collection('daily_progress');
-  CollectionReference get _outfitHistory => _db.collection('outfit_history');
-  CollectionReference get _hairstyleHistory => _db.collection('hairstyle_history');
   CollectionReference get _generationUsage => _db.collection('generation_usage');
+
+  // ── User-scoped subcollection helpers ────────────────────────────────────────
+  /// outfitHistory/{uid}/scans/{scanId}
+  CollectionReference _outfitHistoryFor(String userId) =>
+      _db.collection('outfitHistory').doc(userId).collection('scans');
+
+  /// hairstyleHistory/{uid}/scans/{scanId}
+  CollectionReference _hairstyleHistoryFor(String userId) =>
+      _db.collection('hairstyleHistory').doc(userId).collection('scans');
 
   // ══ UTILS ═══════════════════════════════════════════════════════════════════
 
@@ -478,16 +485,24 @@ class FirestoreService {
 
   // ══ AI COACH USAGE TRACKING ═════════════════════════════════════════════════
 
-  /// Retrieves the total number of tokens used by the user on a specific day.
+  /// Retrieves the token usage for a specific day.
+  /// If [category] is provided, returns only that category's token count
+  /// (e.g. 'coach' for chat only). Otherwise returns the grand total.
   Future<int> getDailyTokenUsage({
     required String userId,
     required String dateKey,
+    String? category,
   }) async {
     try {
       final docId = '${userId}_$dateKey';
       final doc = await _db.collection('ai_usage_tracking').doc(docId).get();
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
+        if (category != null) {
+          // Return only the specified category's token count
+          final categories = data['categories'] as Map<String, dynamic>?;
+          return (categories?[category] as num?)?.toInt() ?? 0;
+        }
         return (data['total_tokens_used'] as num?)?.toInt() ?? 0;
       }
       return 0;
@@ -728,6 +743,7 @@ class FirestoreService {
   }
 
   // ══ OUTFIT HISTORY ══════════════════════════════════════════════════════════
+  // Path: outfitHistory/{userId}/scans/{scanId}
 
   Future<void> saveOutfitRecord({
     required String userId,
@@ -737,7 +753,7 @@ class FirestoreService {
     required Map<String, dynamic> fullData,
   }) async {
     try {
-      await _outfitHistory.doc(id).set({
+      await _outfitHistoryFor(userId).doc(id).set({
         'id': id,
         'user_id': userId,
         'date': Timestamp.fromDate(date),
@@ -752,23 +768,30 @@ class FirestoreService {
 
   Future<List<Map<String, dynamic>>> getOutfitScans(String userId) async {
     try {
-      final snapshot = await _outfitHistory.where('user_id', isEqualTo: userId).orderBy('date', descending: true).get();
-      return snapshot.docs.map((e) => e.data() as Map<String, dynamic>).toList();
+      final snapshot = await _outfitHistoryFor(userId).get();
+      final docs = snapshot.docs.map((e) => e.data() as Map<String, dynamic>).toList();
+      docs.sort((a, b) {
+        final aTime = (a['date'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+        final bTime = (b['date'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+        return bTime.compareTo(aTime);
+      });
+      return docs;
     } catch (e) {
       debugPrint('FirestoreService.getOutfitScans error: $e');
       return [];
     }
   }
 
-  Future<void> deleteOutfitRecord(String id) async {
+  Future<void> deleteOutfitRecord(String userId, String id) async {
     try {
-      await _outfitHistory.doc(id).delete();
+      await _outfitHistoryFor(userId).doc(id).delete();
     } catch (e) {
       debugPrint('FirestoreService.deleteOutfitRecord error: $e');
     }
   }
 
   // ══ HAIRSTYLE HISTORY ══════════════════════════════════════════════════════════
+  // Path: hairstyleHistory/{userId}/scans/{scanId}
 
   Future<void> saveHairStyleRecord({
     required String userId,
@@ -779,7 +802,7 @@ class FirestoreService {
     String? generatedImageUrl,
   }) async {
     try {
-      await _hairstyleHistory.doc(id).set({
+      await _hairstyleHistoryFor(userId).doc(id).set({
         'id': id,
         'user_id': userId,
         'date': Timestamp.fromDate(date),
@@ -795,17 +818,23 @@ class FirestoreService {
 
   Future<List<Map<String, dynamic>>> getHairStyleScans(String userId) async {
     try {
-      final snapshot = await _hairstyleHistory.where('user_id', isEqualTo: userId).orderBy('date', descending: true).get();
-      return snapshot.docs.map((e) => e.data() as Map<String, dynamic>).toList();
+      final snapshot = await _hairstyleHistoryFor(userId).get();
+      final docs = snapshot.docs.map((e) => e.data() as Map<String, dynamic>).toList();
+      docs.sort((a, b) {
+        final aTime = (a['date'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+        final bTime = (b['date'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+        return bTime.compareTo(aTime);
+      });
+      return docs;
     } catch (e) {
       debugPrint('FirestoreService.getHairStyleScans error: $e');
       return [];
     }
   }
 
-  Future<void> deleteHairStyleRecord(String id) async {
+  Future<void> deleteHairStyleRecord(String userId, String id) async {
     try {
-      await _hairstyleHistory.doc(id).delete();
+      await _hairstyleHistoryFor(userId).doc(id).delete();
     } catch (e) {
       debugPrint('FirestoreService.deleteHairStyleRecord error: $e');
     }

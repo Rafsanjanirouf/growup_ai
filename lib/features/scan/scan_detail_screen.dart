@@ -490,7 +490,7 @@ class _ScanDetailScreenState extends ConsumerState<ScanDetailScreen>
                   child: Text(
                     scan.rating.toUpperCase(),
                     style: GoogleFonts.outfit(
-                      fontSize: 28,
+                      fontSize: 20,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
                       letterSpacing: -0.5,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../core/services/auth_service.dart';
@@ -333,7 +334,65 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
                   
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 24),
+
+                  // Legal Footer
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          'By continuing, you agree to our ',
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            color: Colors.white38,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => launchUrl(
+                            Uri.parse('https://growup099.blogspot.com/p/privacy-policy.html'),
+                            mode: LaunchMode.externalApplication,
+                          ),
+                          child: Text(
+                            'Privacy Policy',
+                            style: GoogleFonts.outfit(
+                              fontSize: 11,
+                              color: AppTheme.secondary,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                              decorationColor: AppTheme.secondary,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          ' & ',
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            color: Colors.white38,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => launchUrl(
+                            Uri.parse('https://growup099.blogspot.com/p/terms-conditions.html'),
+                            mode: LaunchMode.externalApplication,
+                          ),
+                          child: Text(
+                            'Terms & Conditions',
+                            style: GoogleFonts.outfit(
+                              fontSize: 11,
+                              color: AppTheme.secondary,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                              decorationColor: AppTheme.secondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),

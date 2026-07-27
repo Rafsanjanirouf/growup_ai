@@ -11,6 +11,8 @@ import '../profile/backup_settings_screen.dart';
 import '../share/glow_up_share_screen.dart';
 import '../../core/providers/subscription_details_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/services/firestore_service.dart';
 import '../../core/providers/habit_provider.dart';
@@ -117,80 +119,196 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  void _showLegalDocument(String title, String content) {
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open link', style: GoogleFonts.outfit()),
+            backgroundColor: AppTheme.danger,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showShareAndEarnModal() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
       builder: (ctx) {
         return Container(
-          decoration: const BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border(top: BorderSide(color: Colors.white12)),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border.all(color: Colors.white10),
           ),
-          child: DraggableScrollableSheet(
-            initialChildSize: 0.7,
-            maxChildSize: 0.95,
-            minChildSize: 0.5,
-            expand: false,
-            builder: (_, controller) {
-              return Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 48,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: Colors.white24,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        const Icon(Icons.gavel_rounded, color: AppTheme.secondary),
-                        const SizedBox(width: 10),
-                        Text(
-                          title,
-                          style: GoogleFonts.outfit(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: ListView(
-                        controller: controller,
-                        children: [
-                          Text(
-                            content,
-                            style: GoogleFonts.outfit(
-                              fontSize: 14,
-                              color: AppTheme.textSecondary,
-                              height: 1.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 36),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 48, height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-              );
-            },
+              ),
+              const SizedBox(height: 20),
+
+              // Header
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.gradientAccent,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(Icons.monetization_on_rounded, color: Colors.black87, size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Share & Earn',
+                        style: GoogleFonts.outfit(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        'Invite friends. They glow up. You earn.',
+                        style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Steps
+              _earnStep('1', '🔗', 'Share your link', 'Send the app link to friends via WhatsApp, Instagram or any platform.'),
+              const SizedBox(height: 12),
+              _earnStep('2', '📲', 'Friend installs & subscribes', 'When your friend downloads & buys a plan, you get credit.'),
+              const SizedBox(height: 12),
+              _earnStep('3', '💸', 'Earn real rewards', 'Track your referrals and cash out earnings to your UPI wallet.'),
+              const SizedBox(height: 28),
+
+              // Share CTA
+              GestureDetector(
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Share.share(
+                    '🔥 I\'ve been using GrowUp AI to maximize my looks — and it\'s insane!\n\n'
+                    'AI face scan, mewing coach, daily habit tracker — all in one.\n\n'
+                    '📲 Download it FREE here:\n'
+                    'https://play.google.com/store/apps/details?id=com.rafsan.growup099&utm_source=in_app_share&utm_medium=referral&utm_campaign=share_and_earn\n\n'
+                    '#GlowUp #Lookmaxxing #GrowUpAI',
+                    subject: 'Try GrowUp AI — Lookmaxxing Coach 🚀',
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.gradientAccent,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primary.withValues(alpha: 0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.share_rounded, color: Colors.black87, size: 20),
+                      const SizedBox(width: 10),
+                      Text(
+                        'SHARE APP NOW',
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 15,
+                          letterSpacing: 0.8,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },
+    );
+  }
+
+  Widget _earnStep(String num, String emoji, String title, String subtitle) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 28, height: 28,
+          decoration: BoxDecoration(
+            color: AppTheme.primary.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+            border: Border.all(color: AppTheme.primary.withValues(alpha: 0.4)),
+          ),
+          child: Center(
+            child: Text(
+              num,
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.primary,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(emoji, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 6),
+                  Text(
+                    title,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -567,6 +685,73 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ],
                 const SizedBox(height: 28),
 
+                // 1.5 Earn Section — after subscription
+                Text(
+                  'EARN WITH GROWUP AI',
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2.0,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                GestureDetector(
+                  onTap: _showShareAndEarnModal,
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppTheme.primary.withValues(alpha: 0.15),
+                          AppTheme.secondary.withValues(alpha: 0.1),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.gradientAccent,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.monetization_on_rounded, color: Colors.black87, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Share App & Make Money',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                'Invite friends → they subscribe → you earn rewards 💸',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded, color: AppTheme.primary),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+
                 // 2. Goal Management Section
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -663,7 +848,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 const SizedBox(height: 28),
 
-                // 4. Legal & Billing Documentation
+                // 5. Legal & Billing Documentation
                 Text(
                   'LEGAL & BILLING DOCUMENTATION',
                   style: GoogleFonts.outfit(
@@ -679,32 +864,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: Column(
                     children: [
                       _buildSettingsTile(Icons.verified_user_rounded, 'Privacy Policy', 'Data boundaries and face camera security protocols', () {
-                        _showLegalDocument(
-                          'Privacy Policy',
-                          'Your facial privacy is our absolute priority.\n\n'
-                              '1. Face Scan Data: All photos captured by your front camera inside the scanning oval frame are processed securely. The image is uploaded temporarily via high-security channels to process Lookmaxxing diagnostics.\n\n'
-                              '2. Zero Persistent Logging: We do not compile, build, or sell visual databases of user face blueprints. Your baseline facial photos remain in your safe before/after vault which only you can access.\n\n'
-                              '3. Third-party safeguards: Diagnostics sent to Gemini Vision API are stripped of user-identifiable metadata, safeguarding privacy completely.',
-                        );
+                        _launchUrl('https://growup099.blogspot.com/p/privacy-policy.html');
                       }),
                       const Divider(color: Colors.white12, height: 1),
-                      _buildSettingsTile(Icons.gavel_rounded, 'Terms of Service', 'Subscription rules and usage terms for Lookmaxxing coaching', () {
-                        _showLegalDocument(
-                          'Terms of Service',
-                          'Welcome to GrowUp AI Lookmaxxing Coach!\n\n'
-                              'By subscribing to GrowUp AI weekly trial (₹49) or pro plans, you agree to: \n\n'
-                              '1. Educational Guidance: Lookmaxxing, Mewing, and jaw fitness routines are for self-improvement educational purposes only. They do not constitute professional clinical medical advice.\n\n'
-                              '2. Subscription Renewals: Subscription billing is managed securely through RevenueCat. You can cancel active auto-renewing subscriptions at any point within Play Store/App Store subscriptions manager.',
-                        );
+                      _buildSettingsTile(Icons.gavel_rounded, 'Terms & Conditions', 'Subscription rules and usage terms for Lookmaxxing coaching', () {
+                        _launchUrl('https://growup099.blogspot.com/p/terms-conditions.html');
                       }),
                       const Divider(color: Colors.white12, height: 1),
-                      _buildSettingsTile(Icons.currency_rupee_rounded, 'Refund Policy', 'Easy Razorpay UPI refunds, standard cancellation terms', () {
-                        _showLegalDocument(
-                          'Refund Policy',
-                          'We support instant risk-free subscriptions!\n\n'
-                              '1. Trial Period Refunds: If you purchased the Weekly Trial (₹49) and are not satisfied with your Day 1 face scan report or habit checklist, you are eligible for a full refund within 48 hours of subscription checkout.\n\n'
-                              '2. Support Claims: To invoke a refund, simply open the Live Help Support section inside this profile page and submit a support ticket detailing your refund claim. Refund amounts are credited back to your original UPI app wallet instantly.',
-                        );
+                      _buildSettingsTile(Icons.currency_rupee_rounded, 'Refund Policy', 'Manage subscription & request refund via Google Play', () {
+                        _launchUrl('https://support.google.com/googleplay/answer/2479637?hl=en');
                       }),
                     ],
                   ),

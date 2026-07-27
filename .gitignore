@@ -86,3 +86,11 @@ ios/Runner/GoogleService-Info.plist
 lib/firebase_options.dart
 lib/core/config/
 
+# Private — Interview Prep (Do not commit)
+flutter_interview_prep.md
+flutter_ui_interview_prep.md
+interview_psychological_playbook.md
+
+# UI Showcase (dev-only, do not commit)
+lib/features/ui_showcase/
+

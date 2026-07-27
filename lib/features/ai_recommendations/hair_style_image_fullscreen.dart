@@ -12,9 +12,15 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 
 class HairStyleImageFullscreen extends StatefulWidget {
-  final String imageBase64;
+  final String? imageBase64;
+  final String? imageUrl;
 
-  const HairStyleImageFullscreen({super.key, required this.imageBase64});
+  const HairStyleImageFullscreen({
+    super.key,
+    this.imageBase64,
+    this.imageUrl,
+  }) : assert(imageBase64 != null || imageUrl != null,
+            'Either imageBase64 or imageUrl must be provided');
 
   @override
   State<HairStyleImageFullscreen> createState() => _HairStyleImageFullscreenState();
@@ -22,7 +28,8 @@ class HairStyleImageFullscreen extends StatefulWidget {
 
 class _HairStyleImageFullscreenState extends State<HairStyleImageFullscreen>
     with SingleTickerProviderStateMixin {
-  late Uint8List _imageBytes;
+  late Uint8List? _imageBytes;
+  bool _isNetworkMode = false;
   bool _isProcessing = false;
   bool _controlsVisible = true;
   late AnimationController _fadeCtrl;
@@ -31,7 +38,13 @@ class _HairStyleImageFullscreenState extends State<HairStyleImageFullscreen>
   @override
   void initState() {
     super.initState();
-    _imageBytes = base64Decode(widget.imageBase64);
+    if (widget.imageUrl != null) {
+      _isNetworkMode = true;
+      _imageBytes = null;
+    } else {
+      _isNetworkMode = false;
+      _imageBytes = base64Decode(widget.imageBase64!);
+    }
     _fadeCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -108,11 +121,25 @@ class _HairStyleImageFullscreenState extends State<HairStyleImageFullscreen>
     return byteData!.buffer.asUint8List();
   }
 
+  /// Fetches image bytes (handles both memory and network).
+  Future<Uint8List> _getImageBytes() async {
+    if (!_isNetworkMode && _imageBytes != null) return _imageBytes!;
+    // Fetch network image
+    final uri = Uri.parse(widget.imageUrl!);
+    final httpClient = HttpClient();
+    final request = await httpClient.getUrl(uri);
+    final response = await request.close();
+    final bytes = <int>[];
+    await response.forEach(bytes.addAll);
+    return Uint8List.fromList(bytes);
+  }
+
   Future<void> _downloadImage() async {
     if (_isProcessing) return;
     setState(() => _isProcessing = true);
     try {
-      final watermarked = await _addWatermark(_imageBytes);
+      final bytes = await _getImageBytes();
+      final watermarked = await _addWatermark(bytes);
       final tempDir = await getTemporaryDirectory();
       final tempPath = '${tempDir.path}/growup_hairstyle_${DateTime.now().millisecondsSinceEpoch}.png';
       await File(tempPath).writeAsBytes(watermarked);
@@ -134,7 +161,8 @@ class _HairStyleImageFullscreenState extends State<HairStyleImageFullscreen>
     if (_isProcessing) return;
     setState(() => _isProcessing = true);
     try {
-      final watermarked = await _addWatermark(_imageBytes);
+      final bytes = await _getImageBytes();
+      final watermarked = await _addWatermark(bytes);
       final tempDir = await getTemporaryDirectory();
       final tempFile = File('${tempDir.path}/growup_hairstyle_share.png');
       await tempFile.writeAsBytes(watermarked);
@@ -217,11 +245,28 @@ class _HairStyleImageFullscreenState extends State<HairStyleImageFullscreen>
                 minScale: 0.8,
                 maxScale: 6.0,
                 child: Center(
-                  child: Image.memory(
-                    _imageBytes,
-                    fit: BoxFit.contain,
-                    gaplessPlayback: true,
-                  ),
+                  child: _isNetworkMode
+                      ? Image.network(
+                          widget.imageUrl!,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (ctx, child, progress) {
+                            if (progress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                color: AppTheme.primary,
+                                strokeWidth: 2,
+                              ),
+                            );
+                          },
+                          errorBuilder: (ctx, e, st) => const Center(
+                            child: Icon(Icons.broken_image, color: Colors.white38, size: 64),
+                          ),
+                        )
+                      : Image.memory(
+                          _imageBytes!,
+                          fit: BoxFit.contain,
+                          gaplessPlayback: true,
+                        ),
                 ),
               ),
 

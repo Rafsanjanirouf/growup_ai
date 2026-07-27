@@ -31,6 +31,9 @@ import 'features/analytics/analytics_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/profile/backup_settings_screen.dart';
 
+
+import 'features/ui_showcase/ui_showcase_screen.dart';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
@@ -94,6 +97,7 @@ class GrowUpAIApp extends StatelessWidget {
         '/analytics': (context) => const AnalyticsScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/backup-settings': (context) => const BackupSettingsScreen(),
+        '/ui-showcase': (context) => const UiShowcaseScreen(),
       },
     );
   }

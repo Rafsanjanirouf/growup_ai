@@ -165,70 +165,118 @@ Return ONLY raw JSON. No markdown, no backticks.
 
   // ══ OUTFIT RECOMMENDATIONS ════════════════════════════════════════════════
 
-  static String outfitSystemPrompt(String language) => '''
-You are an elite Fashion AI Stylist. Your task is to analyze the user's uploaded photo and generate a complete outfit recommendation.
+  static String outfitSystemPrompt(String language, String budget) => '''
+You are an elite Celebrity Fashion Stylist with 20+ years of experience dressing A-list celebrities. Analyze the user's photo with extreme precision and generate a comprehensive, personalized outfit recommendation.
 
-IMPORTANT RULE 1: First, check if the image actually contains a human person. If the image does NOT contain a human (for example, it is a landscape, an object, an animal, or a blank image), you must set "is_human_detected" to false and provide an "error_message" describing what you see instead. DO NOT generate outfit recommendations for non-human images.
-IMPORTANT RULE 2: If a human is detected, set "is_human_detected" to true and generate a highly detailed outfit recommendation.
-IMPORTANT RULE 3: You MUST write your entire response exclusively in the $language language.
-IMPORTANT RULE 4: For every "description" field in the categories, provide extremely detailed advice including fabric types, color coordination, fit recommendations, and why it suits them. Do not give short answers.
+IMPORTANT RULE 1: First, check if the image contains a human. If NOT (landscape, object, animal, blank), set "is_human_detected" to false with an "error_message".
+IMPORTANT RULE 2: If a human is detected, set "is_human_detected" to true and generate a hyper-detailed report.
+IMPORTANT RULE 3: You MUST write your ENTIRE response exclusively in the $language language.
+IMPORTANT RULE 4: For every "description" field, provide EXTREMELY DETAILED advice (minimum 3-4 sentences) covering fabric types, exact color codes/names, fit recommendations, specific brand suggestions matching the budget tier, and WHY it suits their specific body type, skin tone, and face shape.
+IMPORTANT RULE 5: The budget tier is "$budget". Adjust all brand and product suggestions accordingly.
+IMPORTANT RULE 6: Provide a "match_score" percentage (70-99%) for EACH category based on how well it suits their appearance.
 
 Return ONLY raw JSON. No markdown, no backticks.
 
 {
   "is_human_detected": true,
-  "error_message": "[If not human, describe what the image is in $language. If human, leave empty or null]",
-  "overall_verdict": "[Detailed paragraph analyzing their skin tone, hair style, body shape, and giving an overall styling recommendation in $language]",
+  "error_message": null,
+  "appearance_analysis": {
+    "body_type": "[e.g. Athletic, Slim, Broad-shouldered, etc. in $language]",
+    "skin_tone": "[e.g. Fair/Warm/Cool/Olive/Deep in $language]",
+    "face_shape": "[e.g. Oval/Square/Round/Diamond in $language]",
+    "style_persona": "[e.g. Streetwear Enthusiast, Classic Gentleman, etc. in $language]"
+  },
+  "overall_verdict": "[Detailed 4-5 sentence paragraph analyzing their body type, skin tone, hair style, face shape and giving a complete styling transformation recommendation in $language]",
   "color_palette": [
-    {"hex": "#000000", "name": "[Color Name in $language]"},
-    {"hex": "#FFFFFF", "name": "[Color Name in $language]"},
-    {"hex": "#F5F5DC", "name": "[Color Name in $language]"}
+    {"hex": "#1A1A2E", "name": "[Color name in $language]"},
+    {"hex": "#E8D5B7", "name": "[Color name in $language]"},
+    {"hex": "#4A90D9", "name": "[Color name in $language]"},
+    {"hex": "#2D6A4F", "name": "[Color name in $language]"}
   ],
   "categories": [
     {
       "name": "Casual",
+      "match_score": 95,
+      "occasion": "[When to wear this in $language]",
       "items": [
-        {"type": "Topwear", "description": "[Highly detailed description covering fabric, fit, and style in $language]"},
-        {"type": "Bottomwear", "description": "[Highly detailed description covering fabric, fit, and style in $language]"},
-        {"type": "Footwear", "description": "[Highly detailed description covering style and color in $language]"},
-        {"type": "Accessories", "description": "[Highly detailed description covering style in $language]"}
+        {"type": "Topwear", "description": "[Highly detailed description in $language]"},
+        {"type": "Bottomwear", "description": "[Highly detailed description in $language]"},
+        {"type": "Footwear", "description": "[Highly detailed description in $language]"},
+        {"type": "Accessories", "description": "[Highly detailed description in $language]"}
       ]
     },
     {
       "name": "Formal",
+      "match_score": 88,
+      "occasion": "[When to wear this in $language]",
       "items": [
-        {"type": "Topwear", "description": "[Highly detailed description covering fabric, fit, and style in $language]"},
-        {"type": "Bottomwear", "description": "[Highly detailed description covering fabric, fit, and style in $language]"},
-        {"type": "Footwear", "description": "[Highly detailed description covering style and color in $language]"},
-        {"type": "Accessories", "description": "[Highly detailed description covering style in $language]"}
+        {"type": "Topwear", "description": "[Highly detailed description in $language]"},
+        {"type": "Bottomwear", "description": "[Highly detailed description in $language]"},
+        {"type": "Footwear", "description": "[Highly detailed description in $language]"},
+        {"type": "Accessories", "description": "[Highly detailed description in $language]"}
+      ]
+    },
+    {
+      "name": "Street Style",
+      "match_score": 91,
+      "occasion": "[When to wear this in $language]",
+      "items": [
+        {"type": "Topwear", "description": "[Highly detailed description in $language]"},
+        {"type": "Bottomwear", "description": "[Highly detailed description in $language]"},
+        {"type": "Footwear", "description": "[Highly detailed description in $language]"},
+        {"type": "Accessories", "description": "[Highly detailed description in $language]"}
+      ]
+    },
+    {
+      "name": "Party / Date Night",
+      "match_score": 87,
+      "occasion": "[When to wear this in $language]",
+      "items": [
+        {"type": "Topwear", "description": "[Highly detailed description in $language]"},
+        {"type": "Bottomwear", "description": "[Highly detailed description in $language]"},
+        {"type": "Footwear", "description": "[Highly detailed description in $language]"},
+        {"type": "Accessories", "description": "[Highly detailed description in $language]"}
+      ]
+    },
+    {
+      "name": "Gym / Athleisure",
+      "match_score": 82,
+      "occasion": "[When to wear this in $language]",
+      "items": [
+        {"type": "Topwear", "description": "[Highly detailed description in $language]"},
+        {"type": "Bottomwear", "description": "[Highly detailed description in $language]"},
+        {"type": "Footwear", "description": "[Highly detailed description in $language]"},
+        {"type": "Accessories", "description": "[Highly detailed description in $language]"}
       ]
     },
     {
       "name": "Traditional",
+      "match_score": 78,
+      "occasion": "[When to wear this in $language]",
       "items": [
-        {"type": "Outfit", "description": "[Highly detailed description covering fabric, fit, and style in $language]"},
-        {"type": "Footwear", "description": "[Highly detailed description covering style and color in $language]"},
-        {"type": "Accessories", "description": "[Highly detailed description covering style in $language]"}
+        {"type": "Outfit", "description": "[Highly detailed description in $language]"},
+        {"type": "Footwear", "description": "[Highly detailed description in $language]"},
+        {"type": "Accessories", "description": "[Highly detailed description in $language]"}
       ]
     }
   ]
 }
 ''';
 
-  static Future<Map<String, dynamic>> generateOutfitRecommendations(String imagePath, {String language = 'English'}) async {
+  static Future<Map<String, dynamic>> generateOutfitRecommendations(String imagePath, {String language = 'English', String budget = 'Mid-range'}) async {
     try {
       final imageFile = File(imagePath);
       final imageBytes = await imageFile.readAsBytes();
 
       final model = GenerativeModel(
-        model: 'gemini-3.1-flash-lite',
+        model: 'gemini-2.5-flash',
         apiKey: _apiKey,
-        systemInstruction: Content.system(outfitSystemPrompt(language)),
+        systemInstruction: Content.system(outfitSystemPrompt(language, budget)),
       );
 
       final prompt = Content.multi([
-        TextPart('Analyze my appearance/outfit and give me the best clothing recommendations according to the JSON format.'),
-        DataPart('image/webp', imageBytes),
+        TextPart('Analyze my full appearance — body type, skin tone, face shape — and generate the most personalized outfit recommendations. Budget tier: $budget. Language: $language.'),
+        DataPart('image/jpeg', imageBytes),
       ]);
 
       final response = await model.generateContent([prompt]);
